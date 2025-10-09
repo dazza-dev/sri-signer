@@ -165,19 +165,19 @@ class Client
         //  Get message details
         $type = $message->tipo ?? 'ERROR';
         $code = $message->identificador ?? '0';
-        $message = $message->mensaje ?? 'Error en recepción';
-        $additionalInfo = $message->informacionAdicional ?? null;
+        $messageText = $message->mensaje ?? 'Error en recepción';
+        $additionalInfo = $message->informacionAdicional ?? '';
 
         //  Add message to array
         if ($format == 'array') {
             $formattedMessage = [
                 'type' => $type,
                 'code' => $code,
-                'message' => $message,
+                'message' => $messageText,
                 'additionalInfo' => $additionalInfo,
             ];
         } else {
-            $formattedMessage = $type . ' ' . $code . ': ' . $message . ' ' . $additionalInfo;
+            $formattedMessage = $type . ' ' . $code . ': ' . $messageText . ' ' . $additionalInfo;
         }
 
         return $formattedMessage;

@@ -57,7 +57,8 @@ trait Sender
 
             return [
                 'success' => true,
-                'response' => $this->responseRecepcion
+                'response' => $this->responseRecepcion,
+                'messages' => $this->getRecepcionMessages()
             ];
         } catch (Exception $e) {
             return [
@@ -75,7 +76,7 @@ trait Sender
     /**
      * Authorize XML with access key
      */
-    public function authorize(string $accessKey)
+    public function authorize(string $accessKey): array
     {
         try {
             $client = new SoapClient($this->getAutorizacionWsdlUrl());
@@ -89,30 +90,17 @@ trait Sender
                         'claveAccesoComprobante' => $accessKey
                     ]);
 
-                    print_r($response);
-
-                    $autorizaciones = $response->RespuestaAutorizacionComprobante->autorizaciones->autorizacion ?? null;
-
-                    if ($autorizaciones) {
-                        $autorizacion = is_array($autorizaciones) ? $autorizaciones[0] : $autorizaciones;
-
-                        if ($autorizacion->estado === 'AUTORIZADO') {
-                            return [
-                                'success' => true,
-                                'autorizacion' => $autorizacion,
-                                'mensajes' => $autorizacion->mensajes ?? null
-                            ];
-                        }
-
-                        $message = $autorizacion->mensajes->mensaje ?? null;
-                        $code = $message->identificador ?? '0';
-                        $description = $message->mensaje ?? 'Comprobante no autorizado';
-                        $additionalInfo = $message->informacionAdicional ?? null;
-
-                        throw new Exception($code . ': ' . $description . ' ' . $additionalInfo);
+                    // Check if the status is not 'AUTORIZADO'
+                    if ($this->getAutorizacionStatus() !== 'AUTORIZADO') {
+                        sleep(1);
+                        throw new Exception(implode("\n", $this->getAutorizacionMessages('string')));
                     }
 
-                    sleep(1); // Espera antes del siguiente intento
+                    return [
+                        'success' => true,
+                        'response' => $this->responseAutorizacion,
+                        'messages' => $this->getAutorizacionMessages()
+                    ];
                 } catch (SoapFault $e) {
                     throw new Exception('Error de conexión con el SRI: ' . $e->getMessage());
                 } catch (Exception $e) {
@@ -124,8 +112,16 @@ trait Sender
             }
 
             throw new Exception('No se recibió una respuesta de autorización válida del SRI después de varios intentos.');
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
         } catch (SoapFault $e) {
-            throw new Exception('Error de conexión con el SRI: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => 'Error de conexión con el SRI: ' . $e->getMessage()
+            ];
         }
     }
 }

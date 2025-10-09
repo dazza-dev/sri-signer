@@ -1,0 +1,38 @@
+{
+  "name": "dazza-dev/sri-signer",
+  "description": "Paquete para firmar y enviar documentos electrónicos (Facturas, Notas Crédito y Notas Débito) al SRI.",
+  "keywords": [
+    "sri",
+    "signer",
+    "factura electrónica",
+    "ecuador"
+  ],
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.0",
+    "dazza-dev/sri-xml-generator": "^1.0"
+  },
+  "config": {
+    "preferred-install": "dist",
+    "sort-packages": true,
+    "optimize-autoloader": true
+  },
+  "minimum-stability": "stable",
+  "authors": [
+    {
+      "name": "Andres Daza",
+      "email": "adaza90@outlook.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "DazzaDev\\SriSigner\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "DazzaDev\\SriSigner\\Tests\\": "tests/"
+    }
+  }
+}

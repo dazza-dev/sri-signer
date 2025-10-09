@@ -55,6 +55,56 @@ trait Sender
      */
     public function authorize(string $accessKey)
     {
-        //
+        try {
+            $wsdl = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
+            $client = new SoapClient($wsdl);
+
+            $maxIntentos = 5;
+            $intentos = 0;
+            while ($intentos < $maxIntentos) {
+                try {
+                    $intentos++;
+                    $response = $client->autorizacionComprobante([
+                        'claveAccesoComprobante' => $accessKey
+                    ]);
+
+                    print_r($response);
+
+                    $autorizaciones = $response->RespuestaAutorizacionComprobante->autorizaciones->autorizacion ?? null;
+
+                    if ($autorizaciones) {
+                        $autorizacion = is_array($autorizaciones) ? $autorizaciones[0] : $autorizaciones;
+
+                        if ($autorizacion->estado === 'AUTORIZADO') {
+                            return [
+                                'success' => true,
+                                'autorizacion' => $autorizacion,
+                                'mensajes' => $autorizacion->mensajes ?? null
+                            ];
+                        }
+
+                        $message = $autorizacion->mensajes->mensaje ?? null;
+                        $code = $message->identificador ?? '0';
+                        $description = $message->mensaje ?? 'Comprobante no autorizado';
+                        $additionalInfo = $message->informacionAdicional ?? null;
+
+                        throw new Exception($code . ': ' . $description . ' ' . $additionalInfo);
+                    }
+
+                    sleep(1); // Espera antes del siguiente intento
+                } catch (SoapFault $e) {
+                    throw new Exception('Error de conexión con el SRI: ' . $e->getMessage());
+                } catch (Exception $e) {
+                    if ($intentos >= $maxIntentos) {
+                        throw new Exception('Error inesperado en autorización: ' . $e->getMessage());
+                    }
+                    sleep(1);
+                }
+            }
+
+            throw new Exception('No se recibió una respuesta de autorización válida del SRI después de varios intentos.');
+        } catch (SoapFault $e) {
+            throw new Exception('Error de conexión con el SRI: ' . $e->getMessage());
+        }
     }
 }

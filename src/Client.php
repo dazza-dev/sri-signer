@@ -36,9 +36,14 @@ class Client
     private Invoice $document;
 
     /**
-     * Response SRI
+     * Response Recepcion
      */
-    private $responseSri;
+    private $responseRecepcion;
+
+    /**
+     * Response Autorizacion
+     */
+    private $responseAutorizacion;
 
     /**
      * Access key
@@ -82,5 +87,56 @@ class Client
     public function isTestEnvironment(): bool
     {
         return $this->environment['code'] == Environments::TEST->value;
+    }
+
+    /**
+     * Get access key
+     */
+    public function getAccessKey(): string
+    {
+        return $this->accessKey;
+    }
+
+    /**
+     * Get recepcion messages
+     */
+    public function getRecepcionMessages(string $format = 'array'): array|string
+    {
+        $messages = [];
+        if (isset($this->responseRecepcion->RespuestaRecepcionComprobante->comprobantes)) {
+            foreach ($this->responseRecepcion->RespuestaRecepcionComprobante->comprobantes as $comprobante) {
+                foreach ($comprobante->mensajes as $message) {
+                    //  Get message details
+                    $type = $comprobante->tipo ?? 'ERROR';
+                    $code = $message->identificador ?? '0';
+                    $message = $message->mensaje ?? 'Error en recepción';
+                    $additionalInfo = $message->informacionAdicional ?? null;
+
+                    //  Add message to array
+                    if ($format == 'array') {
+                        $formattedMessage = [
+                            'type' => $type,
+                            'code' => $code,
+                            'message' => $message,
+                            'additionalInfo' => $additionalInfo,
+                        ];
+                    } else {
+                        $formattedMessage = $type . ' ' . $code . ': ' . $message . ' ' . $additionalInfo;
+                    }
+
+                    $messages[] = $formattedMessage;
+                }
+            }
+        }
+
+        return $messages;
+    }
+
+    /**
+     * Get recepcion status
+     */
+    public function getRecepcionStatus(): ?string
+    {
+        return $this->responseRecepcion->RespuestaRecepcionComprobante->estado ?? null;
     }
 }

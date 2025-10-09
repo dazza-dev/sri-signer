@@ -7,6 +7,7 @@ use DazzaDev\SriSigner\Traits\Certificate;
 use DazzaDev\SriSigner\Traits\File;
 use DazzaDev\SriSigner\Traits\Listing;
 use DazzaDev\SriSigner\Traits\Signer;
+use DazzaDev\SriSigner\Traits\Sender;
 use DazzaDev\SriXmlGenerator\Enums\Environments;
 use DazzaDev\SriXmlGenerator\Models\Invoice\Invoice;
 
@@ -17,6 +18,7 @@ class Client
     use File;
     use Listing;
     use Signer;
+    use Sender;
 
     /**
      * Is test environment

@@ -36,9 +36,12 @@ trait Document
     public function sendDocument()
     {
         // Sign document
-        $signDocument = $this->signDocument();
+        $this->signDocument();
 
-        return $signDocument;
+        // Send document
+        $this->validate($this->signedDocument);
+
+        return $this->signedDocument;
     }
 
     /**
@@ -46,10 +49,9 @@ trait Document
      */
     public function signDocument()
     {
-        $signDocument = $this->sign($this->documentXml);
-        $this->signedDocument = $signDocument;
+        $this->signedDocument = $this->sign($this->documentXml);
 
-        return $signDocument;
+        return $this->signedDocument;
     }
 
     /**

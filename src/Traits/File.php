@@ -1,8 +1,8 @@
 <?php
 
-namespace DazzaDev\DianFeco\Traits;
+namespace DazzaDev\SriSigner\Traits;
 
-use DazzaDev\DianFeco\Exceptions\FileException;
+use DazzaDev\SriSigner\Exceptions\FileException;
 use ZipArchive;
 
 trait File
@@ -44,7 +44,7 @@ trait File
     {
         $this->validateFilePath();
 
-        return $this->filePath.'/zip';
+        return $this->filePath . '/zip';
     }
 
     /**
@@ -54,7 +54,7 @@ trait File
     {
         $this->validateFilePath();
 
-        return $this->filePath.'/xml';
+        return $this->filePath . '/xml';
     }
 
     /**
@@ -70,7 +70,7 @@ trait File
      */
     public function getXmlFileName(): string
     {
-        return $this->fileName.'.xml';
+        return $this->fileName . '.xml';
     }
 
     /**
@@ -78,7 +78,7 @@ trait File
      */
     public function getZipFileName(): string
     {
-        return $this->fileName.'.zip';
+        return $this->fileName . '.zip';
     }
 
     /**
@@ -102,10 +102,10 @@ trait File
         $companyIdentificationNumber = $company->getIdentificationNumber();
 
         //
-        return $prefix.
-            $this->stuffedString($companyIdentificationNumber).
-            '000'.
-            date('y', strtotime('now America/Bogota')).
+        return $prefix .
+            $this->stuffedString($companyIdentificationNumber) .
+            '000' .
+            date('y', strtotime('now America/Bogota')) .
             $this->stuffedString($number, 8);
     }
 
@@ -140,11 +140,11 @@ trait File
         $this->createDirectories();
 
         // Save signed XML document to file
-        $xmlPath = $this->getXmlPath().'/'.$filenameXml;
+        $xmlPath = $this->getXmlPath() . '/' . $filenameXml;
         file_put_contents($xmlPath, $this->signedDocument);
 
         // Zip path
-        $zipPath = $this->getZipPath().'/'.$filenameZip;
+        $zipPath = $this->getZipPath() . '/' . $filenameZip;
 
         // Create zip file
         $zip = new ZipArchive;
@@ -171,13 +171,13 @@ trait File
         }
 
         // Create xml directory if it doesn't exist
-        if (! file_exists($filePath.'/xml')) {
-            mkdir($filePath.'/xml', 0777, true);
+        if (! file_exists($filePath . '/xml')) {
+            mkdir($filePath . '/xml', 0777, true);
         }
 
         // Create zip directory if it doesn't exist
-        if (! file_exists($filePath.'/zip')) {
-            mkdir($filePath.'/zip', 0777, true);
+        if (! file_exists($filePath . '/zip')) {
+            mkdir($filePath . '/zip', 0777, true);
         }
     }
 

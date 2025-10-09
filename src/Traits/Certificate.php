@@ -1,9 +1,9 @@
 <?php
 
-namespace DazzaDev\DianFeco\Traits;
+namespace DazzaDev\SriSigner\Traits;
 
-use DazzaDev\DianFeco\CertificateValidator;
-use DazzaDev\DianFeco\Exceptions\CertificateException;
+use DazzaDev\SriSigner\CertificateValidator;
+use DazzaDev\SriSigner\Exceptions\CertificateException;
 
 trait Certificate
 {

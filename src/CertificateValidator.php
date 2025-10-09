@@ -1,8 +1,8 @@
 <?php
 
-namespace DazzaDev\DianFeco;
+namespace DazzaDev\SriSigner;
 
-use DazzaDev\DianFeco\Exceptions\CertificateException;
+use DazzaDev\SriSigner\Exceptions\CertificateException;
 
 class CertificateValidator
 {
@@ -39,7 +39,7 @@ class CertificateValidator
     {
         // Check if file exists
         if (! file_exists($this->certificatePath)) {
-            throw new CertificateException('Certificate file not found at: '.$this->certificatePath);
+            throw new CertificateException('Certificate file not found at: ' . $this->certificatePath);
         }
 
         // Read certificate file

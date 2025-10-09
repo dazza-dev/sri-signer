@@ -1,26 +1,27 @@
 <?php
 
-namespace DazzaDev\DianFeco;
+namespace DazzaDev\SriSigner;
 
-use DazzaDev\DianFeco\Actions\AttachedDocument;
-use DazzaDev\DianFeco\Actions\Document;
-use DazzaDev\DianFeco\Actions\GetDocumentById;
-use DazzaDev\DianFeco\Actions\NumberingRange;
-use DazzaDev\DianFeco\Actions\Payroll as PayrollAction;
-use DazzaDev\DianFeco\Actions\StatusEvent;
-use DazzaDev\DianFeco\Actions\ZipStatus;
-use DazzaDev\DianFeco\Traits\Certificate;
-use DazzaDev\DianFeco\Traits\File;
-use DazzaDev\DianFeco\Traits\Listing;
-use DazzaDev\DianFeco\Traits\Software;
-use DazzaDev\DianXmlGenerator\Enums\Environments;
-use DazzaDev\DianXmlGenerator\Models\CreditNote\CreditNote;
-use DazzaDev\DianXmlGenerator\Models\DebitNote\DebitNote;
-use DazzaDev\DianXmlGenerator\Models\Event\Event;
-use DazzaDev\DianXmlGenerator\Models\Invoice\Invoice;
-use DazzaDev\DianXmlGenerator\Models\Invoice\SupportDocument;
-use DazzaDev\DianXmlGenerator\Models\Payroll\AdjustmentNote;
-use DazzaDev\DianXmlGenerator\Models\Payroll\Payroll;
+use DazzaDev\SriSigner\Actions\AttachedDocument;
+use DazzaDev\SriSigner\Actions\Document;
+use DazzaDev\SriSigner\Actions\GetDocumentById;
+use DazzaDev\SriSigner\Actions\NumberingRange;
+use DazzaDev\SriSigner\Actions\Payroll as PayrollAction;
+use DazzaDev\SriSigner\Actions\StatusEvent;
+use DazzaDev\SriSigner\Actions\ZipStatus;
+use DazzaDev\SriSigner\Traits\Certificate;
+use DazzaDev\SriSigner\Traits\File;
+use DazzaDev\SriSigner\Traits\Listing;
+use DazzaDev\SriSigner\Traits\Software;
+use DazzaDev\SriXmlGenerator\Enums\Environments;
+use DazzaDev\SriXmlGenerator\Models\CreditNote\CreditNote;
+use DazzaDev\SriXmlGenerator\Models\DebitNote\DebitNote;
+use DazzaDev\SriXmlGenerator\Models\Event\Event;
+use DazzaDev\SriXmlGenerator\Models\Invoice\Invoice;
+use DazzaDev\SriXmlGenerator\Models\Invoice\SupportDocument;
+use DazzaDev\SriXmlGenerator\Models\Payroll\AdjustmentNote;
+use DazzaDev\SriXmlGenerator\Models\Payroll\Payroll;
+
 use DOMDocument;
 
 class Client
@@ -68,9 +69,9 @@ class Client
     private string $signedDocument;
 
     /**
-     * Response Dian
+     * Response SRI
      */
-    private $responseDian;
+    private $responseSri;
 
     /**
      * Unique code

@@ -1,9 +1,9 @@
 <?php
 
-namespace DazzaDev\DianFeco\Actions;
+namespace DazzaDev\SriSigner\Actions;
 
-use DazzaDev\DianFeco\Exceptions\DocumentException;
-use DazzaDev\DianXmlGenerator\Builders\DocumentBuilder;
+use DazzaDev\SriSigner\Exceptions\DocumentException;
+use DazzaDev\SriXmlGenerator\Builders\DocumentBuilder;
 use Lopezsoft\UBL21dian\Templates\SOAP\SendBillSync;
 use Lopezsoft\UBL21dian\Templates\SOAP\SendTestSetAsync;
 use Lopezsoft\UBL21dian\XAdES\SignCreditNote;
@@ -47,7 +47,7 @@ trait Document
             );
         }
         $sendDocument->To = $this->getEnvironmentUrl();
-        $sendDocument->fileName = $this->document->getFullNumber().'.xml';
+        $sendDocument->fileName = $this->document->getFullNumber() . '.xml';
         $sendDocument->contentFile = $this->zipBase64Bytes;
 
         // Only for test environment
@@ -64,7 +64,7 @@ trait Document
         // Check For Errors
         if (isset($responseDian->Fault)) {
             $errorFault = $responseDian->Fault->Reason->Text;
-            throw new DocumentException('Error: '.$errorFault['_value']);
+            throw new DocumentException('Error: ' . $errorFault['_value']);
         }
 
         // Validate Response

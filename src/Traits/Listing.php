@@ -1,6 +1,6 @@
 <?php
 
-namespace DazzaDev\DianFeco\Traits;
+namespace DazzaDev\SriSigner\Traits;
 
 use Composer\InstalledVersions;
 use Exception;
@@ -9,7 +9,7 @@ trait Listing
 {
     private function getDataDirectory(): string
     {
-        return InstalledVersions::getInstallPath('dazza-dev/dian-xml-generator').'/src/Data/';
+        return InstalledVersions::getInstallPath('dazza-dev/sri-xml-generator') . '/src/Data/';
     }
 
     /**
@@ -36,7 +36,7 @@ trait Listing
      */
     public function getListing(string $type): array
     {
-        $filePath = $this->getDataDirectory()."$type.json";
+        $filePath = $this->getDataDirectory() . "$type.json";
         if (! file_exists($filePath)) {
             throw new Exception('File not found');
         }

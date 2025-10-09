@@ -53,10 +53,11 @@ trait Signer
             $keyInfoNode->setAttribute('Id', $keyInfoId);
         }
         
+        // FIX: Ensure ds:Transforms contains a valid ds:Transform (use C14N) to satisfy SRI schema
         $objDSig->addReference(
             $keyInfoNode,
             XMLSecurityDSig::SHA1,
-            [],
+            [XMLSecurityDSig::C14N],
             ['overwrite' => false]
         );
 

@@ -81,34 +81,4 @@ class Client
     {
         return $this->environment['code'] == Environments::TEST->value;
     }
-
-    /**
-     * Get errors
-     */
-    public function getErrors(): array
-    {
-        $errors = [];
-        if (isset($this->responseDian->ErrorMessage->string)) {
-            $errorsList = $this->responseDian->ErrorMessage->string;
-            $errors = (is_array($errorsList)) ? $errorsList : [$errorsList];
-        }
-
-        return $errors;
-    }
-
-    /**
-     * Get status message
-     */
-    public function getStatusMessage(): string
-    {
-        return is_string($this->responseDian->StatusMessage) ? $this->responseDian->StatusMessage : '';
-    }
-
-    /**
-     * Is valid
-     */
-    public function isValid(): bool
-    {
-        return filter_var($this->responseDian->IsValid, FILTER_VALIDATE_BOOLEAN);
-    }
 }

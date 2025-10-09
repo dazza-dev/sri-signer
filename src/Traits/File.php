@@ -38,23 +38,23 @@ trait File
     }
 
     /**
-     * Get zip path
+     * Get signed path
      */
-    public function getZipPath(): string
+    public function getSignedPath(): string
     {
         $this->validateFilePath();
 
-        return $this->filePath . '/zip';
+        return $this->filePath . '/signed';
     }
 
     /**
-     * Get XML path
+     * Get generated path
      */
-    public function getXmlPath(): string
+    public function getGeneratedPath(): string
     {
         $this->validateFilePath();
 
-        return $this->filePath . '/xml';
+        return $this->filePath . '/generated';
     }
 
     /**
@@ -63,50 +63,6 @@ trait File
     public function setFilePath(string $filePath): void
     {
         $this->filePath = $filePath;
-    }
-
-    /**
-     * Get zip file name
-     */
-    public function getXmlFileName(): string
-    {
-        return $this->fileName . '.xml';
-    }
-
-    /**
-     * Get file name
-     */
-    public function getZipFileName(): string
-    {
-        return $this->fileName . '.zip';
-    }
-
-    /**
-     * Get base file name
-     */
-    public function getBaseFileName(): string
-    {
-        $number = $this->document->getNumber();
-        $prefix = $this->document->getDocumentType()->getCodeType();
-
-        // Document Number by type
-        if ($prefix == 'ar') {
-            $company = $this->document->getReceiver();
-        } elseif ($prefix == 'nie' || $prefix == 'niae') {
-            $company = $this->document->getEmployer();
-        } else {
-            $company = $this->document->getCompany();
-        }
-
-        // Company Identification Number
-        $companyIdentificationNumber = $company->getIdentificationNumber();
-
-        //
-        return $prefix .
-            $this->stuffedString($companyIdentificationNumber) .
-            '000' .
-            date('y', strtotime('now America/Bogota')) .
-            $this->stuffedString($number, 8);
     }
 
     /**
@@ -126,39 +82,6 @@ trait File
     }
 
     /**
-     * Generate zip file
-     */
-    protected function generateZipFile()
-    {
-        $this->setFileName();
-
-        // Routes
-        $filenameXml = $this->getXmlFileName();
-        $filenameZip = $this->getZipFileName();
-
-        // Create directories
-        $this->createDirectories();
-
-        // Save signed XML document to file
-        $xmlPath = $this->getXmlPath() . '/' . $filenameXml;
-        file_put_contents($xmlPath, $this->signedDocument);
-
-        // Zip path
-        $zipPath = $this->getZipPath() . '/' . $filenameZip;
-
-        // Create zip file
-        $zip = new ZipArchive;
-        $zip->open($zipPath, ZipArchive::CREATE);
-        $zip->addFile($xmlPath, $filenameXml);
-        $zip->close();
-
-        // Base64 bytes
-        $this->zipBase64Bytes = base64_encode(file_get_contents($zipPath));
-
-        return $this->zipBase64Bytes;
-    }
-
-    /**
      * Create directories
      */
     protected function createDirectories()
@@ -170,22 +93,14 @@ trait File
             mkdir($filePath, 0777, true);
         }
 
-        // Create xml directory if it doesn't exist
-        if (! file_exists($filePath . '/xml')) {
-            mkdir($filePath . '/xml', 0777, true);
+        // Create generated directory if it doesn't exist
+        if (! file_exists($filePath . '/generated')) {
+            mkdir($filePath . '/generated', 0777, true);
         }
 
-        // Create zip directory if it doesn't exist
-        if (! file_exists($filePath . '/zip')) {
-            mkdir($filePath . '/zip', 0777, true);
+        // Create signed directory if it doesn't exist
+        if (! file_exists($filePath . '/signed')) {
+            mkdir($filePath . '/signed', 0777, true);
         }
-    }
-
-    /**
-     * Stuffed string
-     */
-    public function stuffedString(string $string, int $length = 10, int $padString = 0): string
-    {
-        return str_pad($string, $length, $padString, STR_PAD_LEFT);
     }
 }

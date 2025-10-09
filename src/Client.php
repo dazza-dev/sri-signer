@@ -122,6 +122,42 @@ class Client
     }
 
     /**
+     * Get autorizacion messages
+     */
+    public function getAutorizacionMessages(string $format = 'array'): array|string
+    {
+        $messages = [];
+        if (isset($this->responseAutorizacion->RespuestaAutorizacionComprobante->autorizaciones)) {
+            $autorizacion = $this->responseAutorizacion->RespuestaAutorizacionComprobante->autorizaciones->autorizacion;
+            foreach ($autorizacion->mensajes as $message) {
+                if (is_array($message)) {
+                    foreach ($message as $msg) {
+                        $messages[] = $this->formatMessage($msg, $format);
+                    }
+                } else {
+                    $messages[] = $this->formatMessage($message, $format);
+                }
+            }
+        }
+
+        return $messages;
+    }
+
+    /**
+     * Get autorizacion status
+     */
+    public function getAutorizacionStatus(): ?string
+    {
+        $autorizacion = $this->responseAutorizacion->RespuestaAutorizacionComprobante
+            ->autorizaciones
+            ->autorizacion;
+
+        $autorizacion = is_array($autorizacion) ? $autorizacion[0] : $autorizacion;
+
+        return $autorizacion->estado ?? null;
+    }
+
+    /**
      * Format Messages
      */
     public function formatMessage(object $message, string $format = 'array'): array|string

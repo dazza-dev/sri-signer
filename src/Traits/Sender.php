@@ -85,7 +85,7 @@ trait Sender
             while ($intentos < $maxIntentos) {
                 try {
                     $intentos++;
-                    $response = $client->autorizacionComprobante([
+                    $this->responseAutorizacion = $client->autorizacionComprobante([
                         'claveAccesoComprobante' => $accessKey
                     ]);
 

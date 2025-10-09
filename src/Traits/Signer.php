@@ -23,69 +23,73 @@ trait Signer
         $objDSig->setCanonicalMethod(XMLSecurityDSig::C14N);
 
         // --- 2. Crear IDs y Nombres Requeridos para XAdES ---
-        // En XAdES, todos los nodos principales (Signature, KeyInfo, SignedProperties) deben tener un ID.
-        $signatureId = 'Signature-1312421384'; // Use un ID dinámico y único aquí (ej: basado en tiempo o hash)
+        // Generate unique ID based on timestamp and random component
+        $uniqueId = uniqid('', true);
+        $signatureId = 'Signature-' . $uniqueId;
         $keyInfoId = 'KeyInfoId-' . $signatureId;
         $signedPropsId = 'SignedProperties-' . $signatureId;
+        $signedInfoId = 'Signature-SignedInfo-' . $uniqueId;
 
         // Establecer el ID de la firma
         $objDSig->sigNode->setAttribute('Id', $signatureId);
+        
+        // CORRECCIÓN CRÍTICA: Agregar ID al ds:SignedInfo
+        $objDSig->sigNode->getElementsByTagName('SignedInfo')->item(0)->setAttribute('Id', $signedInfoId);
 
         // --- 3. Generar el Bloque XAdES (ds:Object y etsi:QualifyingProperties) ---
         // El bloque XAdES contiene las propiedades firmadas (hora, política, etc.).
-        $qualifyingProperties = $this->generateSignedProperties($xml, $signedPropsId, $signatureId);
+        $qualifyingProperties = $this->generateSignedProperties($xml, $signedPropsId, $signatureId, $uniqueId);
 
         $objNode = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:Object');
+        // CORRECCIÓN: Evitar namespaces duplicados en el ds:Object
         $objNode->appendChild($qualifyingProperties);
 
-        // --- 4. Agregar las 3 Referencias Requeridas por XAdES ---
+        // --- 4. Agregar las Referencias Requeridas por XAdES ---
+        // Primero agregar el certificado para que exista el KeyInfo
+        $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, ['type' => 'private']);
+        $objKey->loadKey($this->getPrivateKey(), false);
 
-        // a) Referencia al 'ds:KeyInfo' (siempre necesaria en XAdES para asegurar el certificado)
-        $keyInfo = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:KeyInfo');
-        $keyInfo->setAttribute('Id', $keyInfoId);
+        // Firmar el documento para crear la estructura básica
+        $objDSig->sign($objKey);
 
-        // a) Referencia a KeyInfo (sin el nodo KeyInfo AÚN, la librería lo generará con add509Cert)
-        $objDSig->addReference(
-            $xml->documentElement,
-            XMLSecurityDSig::SHA1,
-            ['http://www.w3.org/2001/10/xml-exc-c14n#'], // <-- Añadir C14N Exclusiva
-            ['uri' => '#' . $keyInfoId]
-        );
+        // Añadir la información del certificado (X509Data)
+        $objDSig->add509Cert($this->getPublicCert(), true, false, ['issuerSerial' => true]);
+        
+        // Establecer el ID del KeyInfo después de que se cree
+        $keyInfoNode = $objDSig->sigNode->getElementsByTagName('KeyInfo')->item(0);
+        if ($keyInfoNode) {
+            $keyInfoNode->setAttribute('Id', $keyInfoId);
+        }
 
-        // b) Referencia a Factura
+        // Ahora agregar las referencias en el orden correcto
+        // a) Referencia al KeyInfo (ahora que existe)
+        if ($keyInfoNode) {
+            $objDSig->addReference(
+                $keyInfoNode,
+                XMLSecurityDSig::SHA1,
+                ['http://www.w3.org/2001/10/xml-exc-c14n#'],
+                ['uri' => '#' . $keyInfoId]
+            );
+        }
+
+        // b) Referencia a Factura (documento principal)
         $objDSig->addReference(
             $root,
             XMLSecurityDSig::SHA1,
             ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
-            ['uri' => '#comprobante', 'id' => 'Reference-' . $signatureId]
+            ['uri' => '#comprobante', 'id' => 'Reference-' . $uniqueId]
         );
 
         // c) Referencia al 'etsi:SignedProperties'
         $objDSig->addReference(
             $qualifyingProperties,
             XMLSecurityDSig::SHA1,
-            ['http://www.w3.org/2001/10/xml-exc-c14n#'], // <-- Añadir C14N Exclusiva
+            ['http://www.w3.org/2001/10/xml-exc-c14n#'],
             ['uri' => '#' . $signedPropsId, 'type' => 'http://uri.etsi.org/01903#SignedProperties']
         );
 
-        // --- 5. Firmar y Finalizar ---
-
-        // La clave para firmar (SHA1 + RSA)
-        $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, ['type' => 'private']);
-        $objKey->loadKey($this->getPrivateKey(), false);
-
-        // Firmar el documento. Los DigestValues se calculan en este paso.
-        $objDSig->sign($objKey);
-
-        // Añadir la información del certificado (X509Data)
-        // Nota: El certificado debe incluir la Serial del emisor, como en el XML válido.
-        $objDSig->add509Cert($this->getPublicCert(), true, false, ['issuerSerial' => false]);
-
-        // El 'ds:Signature' debe estar en el XML *antes* de calcular las referencias.
-        // Usamos esta referencia temporal para generar el SignedInfo y luego calcular los DigestValues
-        $objDSig->appendSignature($root);
-
         // --- CORRECCIÓN: Adjuntar el ds:Object después de la firma ---
+        $objDSig->appendSignature($root);
         $root->appendChild($objNode);
 
         // Cleanup: Eliminar el 'Id' del nodo raíz si fue agregado temporalmente.
@@ -97,7 +101,7 @@ trait Signer
     }
 
 
-    protected function generateSignedProperties(DOMDocument $xml, string $signedPropsId, string $signatureId): DOMElement
+    protected function generateSignedProperties(DOMDocument $xml, string $signedPropsId, string $signatureId, string $uniqueId): DOMElement
     {
         // Obtenga la información del certificado para el IssuerSerial
         $cert = $this->getPublicCert();
@@ -162,7 +166,7 @@ trait Signer
         // --- etsi:SignedDataObjectProperties ---
         $signedDataObjectProperties = $xml->createElementNS($etsiNS, 'etsi:SignedDataObjectProperties');
         $dataObjectFormat = $xml->createElementNS($etsiNS, 'etsi:DataObjectFormat');
-        $dataObjectFormat->setAttribute('ObjectReference', 'Reference-' . $signatureId); // Usar el ID de la referencia a la factura
+        $dataObjectFormat->setAttribute('ObjectReference', 'Reference-' . $uniqueId); // Usar el ID consistente
 
         $description = $xml->createElementNS($etsiNS, 'etsi:Description', 'contenido comprobante');
         $mimeType = $xml->createElementNS($etsiNS, 'etsi:MimeType', 'text/xml');

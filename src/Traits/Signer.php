@@ -32,7 +32,7 @@ trait Signer
 
         // Establecer el ID de la firma
         $objDSig->sigNode->setAttribute('Id', $signatureId);
-        
+
         // CORRECCIÓN CRÍTICA: Agregar ID al ds:SignedInfo
         $objDSig->sigNode->getElementsByTagName('SignedInfo')->item(0)->setAttribute('Id', $signedInfoId);
 
@@ -46,14 +46,14 @@ trait Signer
 
         // --- 4. Agregar las Referencias Requeridas por XAdES ---
         // CORRECCIÓN: Usar 'overwrite' => false para que use IDs existentes
-        
+
         // Establecer el ID del documento principal temporalmente
         $root->setAttribute('Id', 'comprobante');
-        
+
         // Crear elementos temporales para las referencias que no existen aún
         $tempKeyInfo = $xml->createElement('KeyInfo');
         $tempKeyInfo->setAttribute('Id', $keyInfoId);
-        
+
         $tempSignedProps = $xml->createElement('SignedProperties');
         $tempSignedProps->setAttribute('Id', $signedPropsId);
 
@@ -61,7 +61,7 @@ trait Signer
         $objDSig->addReference(
             $tempKeyInfo,
             XMLSecurityDSig::SHA1,
-            ['http://www.w3.org/2001/10/xml-exc-c14n#'],
+            [],
             ['overwrite' => false]
         );
 
@@ -77,7 +77,7 @@ trait Signer
         $objDSig->addReference(
             $tempSignedProps,
             XMLSecurityDSig::SHA1,
-            ['http://www.w3.org/2001/10/xml-exc-c14n#'],
+            [],
             ['overwrite' => false, 'type' => 'http://uri.etsi.org/01903#SignedProperties']
         );
 
@@ -90,7 +90,7 @@ trait Signer
 
         // Añadir la información del certificado (X509Data)
         $objDSig->add509Cert($this->getPublicCert(), true, false, ['issuerSerial' => true]);
-        
+
         // Establecer el ID del KeyInfo después de que se cree
         $keyInfoNode = $objDSig->sigNode->getElementsByTagName('KeyInfo')->item(0);
         if ($keyInfoNode) {

@@ -45,19 +45,28 @@ trait Signer
         $objNode->appendChild($qualifyingProperties);
 
         // --- 4. Agregar Referencias para la Firma ---
-        // CORRECCIÓN: Agregar referencia al KeyInfo primero como en archivo válido SRI
+
+        // Referencia a las propiedades firmadas (XAdES)
+        $objDSig->addReference(
+            $qualifyingProperties->getElementsByTagName('SignedProperties')->item(0),
+            XMLSecurityDSig::SHA1,
+            null,
+            ['overwrite' => false, 'type' => 'http://uri.etsi.org/01903#SignedProperties']
+        );
+
+        //
         $keyInfoNode = $objDSig->sigNode->getElementsByTagName('KeyInfo')->item(0);
         if (!$keyInfoNode) {
             // Crear un KeyInfo temporal para la referencia
             $keyInfoNode = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:KeyInfo');
             $keyInfoNode->setAttribute('Id', $keyInfoId);
         }
-        
+
         // FIX: Ensure ds:Transforms contains a valid ds:Transform (use C14N) to satisfy SRI schema
         $objDSig->addReference(
             $keyInfoNode,
             XMLSecurityDSig::SHA1,
-            [XMLSecurityDSig::C14N],
+            null,
             ['overwrite' => false]
         );
 
@@ -65,16 +74,8 @@ trait Signer
         $objDSig->addReference(
             $root,
             XMLSecurityDSig::SHA1,
-            ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
+            null,
             ['id_name' => 'id', 'overwrite' => false]
-        );
-
-        // Referencia a las propiedades firmadas (XAdES)
-        $objDSig->addReference(
-            $qualifyingProperties->getElementsByTagName('SignedProperties')->item(0),
-            XMLSecurityDSig::SHA1,
-            [XMLSecurityDSIG::C14N],
-            ['overwrite' => false, 'type' => 'http://uri.etsi.org/01903#SignedProperties']
         );
 
         // Ahora crear la clave y firmar
@@ -86,7 +87,7 @@ trait Signer
 
         // Añadir la información del certificado (X509Data) con cadena completa
         $objDSig->add509Cert($this->getPublicCert(), true, false, ['issuerSerial' => true]);
-        
+
         // Agregar certificados intermedios si están disponibles en el certificado
         if (isset($this->certificateData['extracerts']) && is_array($this->certificateData['extracerts'])) {
             foreach ($this->certificateData['extracerts'] as $extraCert) {
@@ -140,7 +141,7 @@ trait Signer
         }
         $issuerName = implode(',', $issuerParts);
         $issuerSerial = (string) $certData['serialNumber'];
-        
+
         // Calcular el digest SHA1 del certificado DER (binario)
         $certBinary = base64_decode(preg_replace('/-----[^-]+-----/', '', $cert));
         $certDigestValue = base64_encode(sha1($certBinary, true));

@@ -117,8 +117,8 @@ class CertificateValidator
         $passwords = [
             $this->certificatePassword,
             trim($this->certificatePassword),
-            utf8_encode($this->certificatePassword),
-            utf8_decode($this->certificatePassword)
+            mb_convert_encoding($this->certificatePassword, 'UTF-8', 'ISO-8859-1'),
+            mb_convert_encoding($this->certificatePassword, 'ISO-8859-1', 'UTF-8')
         ];
 
         foreach ($passwords as $index => $password) {

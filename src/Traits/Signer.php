@@ -45,11 +45,47 @@ trait Signer
         $objNode->appendChild($qualifyingProperties);
 
         // --- 4. Agregar las Referencias Requeridas por XAdES ---
-        // Primero agregar el certificado para que exista el KeyInfo
+        // CORRECCIÓN: Usar 'overwrite' => false para que use IDs existentes
+        
+        // Establecer el ID del documento principal temporalmente
+        $root->setAttribute('Id', 'comprobante');
+        
+        // Crear elementos temporales para las referencias que no existen aún
+        $tempKeyInfo = $xml->createElement('KeyInfo');
+        $tempKeyInfo->setAttribute('Id', $keyInfoId);
+        
+        $tempSignedProps = $xml->createElement('SignedProperties');
+        $tempSignedProps->setAttribute('Id', $signedPropsId);
+
+        // a) Referencia al KeyInfo (usando elemento temporal con overwrite=false)
+        $objDSig->addReference(
+            $tempKeyInfo,
+            XMLSecurityDSig::SHA1,
+            ['http://www.w3.org/2001/10/xml-exc-c14n#'],
+            ['overwrite' => false]
+        );
+
+        // b) Referencia a Factura (documento principal con overwrite=false)
+        $objDSig->addReference(
+            $root,
+            XMLSecurityDSig::SHA1,
+            ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
+            ['overwrite' => false, 'id' => 'Reference-' . $uniqueId]
+        );
+
+        // c) Referencia al 'etsi:SignedProperties' (usando elemento temporal con overwrite=false)
+        $objDSig->addReference(
+            $tempSignedProps,
+            XMLSecurityDSig::SHA1,
+            ['http://www.w3.org/2001/10/xml-exc-c14n#'],
+            ['overwrite' => false, 'type' => 'http://uri.etsi.org/01903#SignedProperties']
+        );
+
+        // Ahora crear la clave y firmar
         $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, ['type' => 'private']);
         $objKey->loadKey($this->getPrivateKey(), false);
 
-        // Firmar el documento para crear la estructura básica
+        // Firmar el documento
         $objDSig->sign($objKey);
 
         // Añadir la información del certificado (X509Data)
@@ -60,33 +96,6 @@ trait Signer
         if ($keyInfoNode) {
             $keyInfoNode->setAttribute('Id', $keyInfoId);
         }
-
-        // Ahora agregar las referencias en el orden correcto
-        // a) Referencia al KeyInfo (ahora que existe)
-        if ($keyInfoNode) {
-            $objDSig->addReference(
-                $keyInfoNode,
-                XMLSecurityDSig::SHA1,
-                ['http://www.w3.org/2001/10/xml-exc-c14n#'],
-                ['uri' => '#' . $keyInfoId]
-            );
-        }
-
-        // b) Referencia a Factura (documento principal)
-        $objDSig->addReference(
-            $root,
-            XMLSecurityDSig::SHA1,
-            ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
-            ['uri' => '#comprobante', 'id' => 'Reference-' . $uniqueId]
-        );
-
-        // c) Referencia al 'etsi:SignedProperties'
-        $objDSig->addReference(
-            $qualifyingProperties,
-            XMLSecurityDSig::SHA1,
-            ['http://www.w3.org/2001/10/xml-exc-c14n#'],
-            ['uri' => '#' . $signedPropsId, 'type' => 'http://uri.etsi.org/01903#SignedProperties']
-        );
 
         // --- CORRECCIÓN: Adjuntar el ds:Object después de la firma ---
         $objDSig->appendSignature($root);

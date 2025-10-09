@@ -79,7 +79,7 @@ trait Signer
 
         // Añadir la información del certificado (X509Data)
         // Nota: El certificado debe incluir la Serial del emisor, como en el XML válido.
-        $objDSig->add509Cert($this->getPublicCert(), true, false, ['issuerSerial' => true]);
+        $objDSig->add509Cert($this->getPublicCert(), true, false, ['issuerSerial' => false]);
 
         // El 'ds:Signature' debe estar en el XML *antes* de calcular las referencias.
         // Usamos esta referencia temporal para generar el SignedInfo y luego calcular los DigestValues

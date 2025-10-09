@@ -86,4 +86,21 @@ trait Certificate
 
         return $this->certificateData;
     }
+
+
+    /**
+     * Get public certificate
+     */
+    public function getPublicCert(): string
+    {
+        return $this->certificateData['cert'];
+    }
+
+    /**
+     * Get private key
+     */
+    public function getPrivateKey(): string
+    {
+        return $this->certificateData['pkey'];
+    }
 }

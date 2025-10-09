@@ -9,14 +9,36 @@ use SoapFault;
 trait Sender
 {
     /**
+     * Get reception WSDL URL based on environment
+     */
+    private function getRecepcionWsdlUrl(): string
+    {
+        if ($this->isTestEnvironment()) {
+            return 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl';
+        }
+
+        return 'https://cel.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl';
+    }
+
+    /**
+     * Get authorization WSDL URL based on environment
+     */
+    private function getAutorizacionWsdlUrl(): string
+    {
+        if ($this->isTestEnvironment()) {
+            return 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
+        }
+
+        return 'https://cel.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
+    }
+
+    /**
      * Validate signed XML
      */
-    public function validate(string $signedXml)
+    public function validate(string $signedXml): array
     {
         try {
-            $recepcionWSDL = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl';
-
-            $client = new SoapClient($recepcionWSDL, [
+            $client = new SoapClient($this->getRecepcionWsdlUrl(), [
                 'trace' => 1,
                 'cache_wsdl' => WSDL_CACHE_NONE,
                 'user_agent' => 'SOAP Client',
@@ -29,7 +51,6 @@ trait Sender
             ]);
 
             $status = $response->RespuestaRecepcionComprobante->estado ?? null;
-
             if ($status !== 'RECIBIDA') {
                 // Extract the first error message from the SRI
                 $message = $response->RespuestaRecepcionComprobante->comprobantes->comprobante->mensajes->mensaje ?? null;
@@ -46,7 +67,10 @@ trait Sender
                 'response' => $response
             ];
         } catch (SoapFault $e) {
-            throw new Exception('Error de conexión con el SRI: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => 'Error de conexión con el SRI: ' . $e->getMessage()
+            ];
         }
     }
 
@@ -56,8 +80,7 @@ trait Sender
     public function authorize(string $accessKey)
     {
         try {
-            $wsdl = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
-            $client = new SoapClient($wsdl);
+            $client = new SoapClient($this->getAutorizacionWsdlUrl());
 
             $maxIntentos = 5;
             $intentos = 0;

@@ -11,7 +11,8 @@
   "license": "MIT",
   "require": {
     "php": ">=8.0",
-    "dazza-dev/sri-xml-generator": "^1.0"
+    "dazza-dev/sri-xml-generator": "^1.0",
+    "robrichards/xmlseclibs": "^3.1"
   },
   "config": {
     "preferred-install": "dist",

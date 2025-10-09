@@ -2,41 +2,21 @@
 
 namespace DazzaDev\SriSigner;
 
-use DazzaDev\SriSigner\Actions\AttachedDocument;
 use DazzaDev\SriSigner\Actions\Document;
-use DazzaDev\SriSigner\Actions\GetDocumentById;
-use DazzaDev\SriSigner\Actions\NumberingRange;
-use DazzaDev\SriSigner\Actions\Payroll as PayrollAction;
-use DazzaDev\SriSigner\Actions\StatusEvent;
-use DazzaDev\SriSigner\Actions\ZipStatus;
 use DazzaDev\SriSigner\Traits\Certificate;
 use DazzaDev\SriSigner\Traits\File;
 use DazzaDev\SriSigner\Traits\Listing;
-use DazzaDev\SriSigner\Traits\Software;
 use DazzaDev\SriXmlGenerator\Enums\Environments;
-use DazzaDev\SriXmlGenerator\Models\CreditNote\CreditNote;
-use DazzaDev\SriXmlGenerator\Models\DebitNote\DebitNote;
-use DazzaDev\SriXmlGenerator\Models\Event\Event;
 use DazzaDev\SriXmlGenerator\Models\Invoice\Invoice;
-use DazzaDev\SriXmlGenerator\Models\Invoice\SupportDocument;
-use DazzaDev\SriXmlGenerator\Models\Payroll\AdjustmentNote;
-use DazzaDev\SriXmlGenerator\Models\Payroll\Payroll;
 
 use DOMDocument;
 
 class Client
 {
-    use AttachedDocument;
     use Certificate;
     use Document;
     use File;
-    use GetDocumentById;
     use Listing;
-    use NumberingRange;
-    use PayrollAction;
-    use Software;
-    use StatusEvent;
-    use ZipStatus;
 
     /**
      * Is test environment
@@ -49,24 +29,9 @@ class Client
     protected array $environment;
 
     /**
-     * Technical key
-     */
-    protected ?string $technicalKey;
-
-    /**
      * Document
      */
-    private Invoice|SupportDocument|CreditNote|DebitNote|Event|Payroll|AdjustmentNote $document;
-
-    /**
-     * Document XML
-     */
-    private DOMDocument $documentXml;
-
-    /**
-     * Signed document
-     */
-    private string $signedDocument;
+    private Invoice $document;
 
     /**
      * Response SRI
@@ -74,19 +39,9 @@ class Client
     private $responseSri;
 
     /**
-     * Unique code
+     * Access key
      */
-    private string $uniqueCode;
-
-    /**
-     * Zip Base64 bytes
-     */
-    private string $zipBase64Bytes;
-
-    /**
-     * Xml Base64 bytes
-     */
-    private string $xmlBase64Bytes;
+    private string $accessKey;
 
     /**
      * Constructor
@@ -120,51 +75,11 @@ class Client
     }
 
     /**
-     * Get environment url
-     */
-    public function getEnvironmentUrl(): string
-    {
-        return $this->environment['service_url'];
-    }
-
-    /**
      * Is test environment
      */
     public function isTestEnvironment(): bool
     {
-        return $this->environment['code'] == '2';
-    }
-
-    /**
-     * Set technical key
-     */
-    public function setTechnicalKey(string $technicalKey): void
-    {
-        $this->technicalKey = $technicalKey;
-    }
-
-    /**
-     * Get technical key
-     */
-    public function getTechnicalKey(): ?string
-    {
-        return $this->technicalKey ?? null;
-    }
-
-    /**
-     * Set unique code
-     */
-    public function setUniqueCode(string $uniqueCode): void
-    {
-        $this->uniqueCode = $uniqueCode;
-    }
-
-    /**
-     * Get unique code
-     */
-    public function getUniqueCode(): ?string
-    {
-        return $this->uniqueCode;
+        return $this->environment['code'] == Environments::TEST->value;
     }
 
     /**

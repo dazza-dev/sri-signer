@@ -23,28 +23,29 @@ class AccessKeyGenerator
      * Generate an access key for the SRI XML
      *
      * @param array $data Array containing the required data for access key generation
-     *                   - fechaEmision: Emission date (string)
-     *                   - ruc: RUC number (string)
-     *                   - codDoc: Document type code (string)
-     *                   - ambiente: Environment type (string)
-     *                   - secuencial: Sequential number (string|int)
-     *                   - estab: Establishment code (optional, defaults to '001')
-     *                   - ptoEmi: Emission point code (optional, defaults to '001')
+     *                   - date: Emission date (string)
+     *                   - company: Array containing company information
+     *                             - identification_number: RUC number (string)
+     *                   - document_type: Document type code (string)
+     *                   - environment: Environment type (string)
+     *                   - sequential: Sequential number (string|int)
+     *                   - establishment: Establishment code (optional, defaults to '001')
+     *                   - emission_point: Emission point code (optional, defaults to '001')
      * @return string The generated access key
      * @throws InvalidArgumentException When required data is missing or invalid
      * @throws Exception When access key generation fails
      */
-    public static function generate(array $data): string
-    {
+    public static function generate(
+        string $documentType,
+        array $data
+    ): string {
         try {
-            self::validateRequiredData($data);
-
-            $formattedDate = self::formatEmissionDate($data['fechaEmision']);
-            $ruc = $data['ruc'];
-            $documentType = $data['codDoc'];
-            $environment = $data['ambiente'];
+            $formattedDate = self::formatEmissionDate($data['date']);
+            $ruc = $data['company']['identification_number'];
+            $documentType = self::getDocumentType($documentType);
+            $environment = $data['environment'];
             $series = self::buildSeries($data);
-            $sequential = self::formatSequential($data['secuencial']);
+            $sequential = self::formatSequential($data['sequential']);
             $numericCode = self::generateNumericCode();
 
             $verificationString = self::buildVerificationString(
@@ -66,29 +67,23 @@ class AccessKeyGenerator
     }
 
     /**
-     * Validate that all required data is present and valid
+     * Get document type code
      *
-     * @param array $data The input data array
-     * @throws InvalidArgumentException When required data is missing or invalid
+     * @param string $documentType Document type
+     * @return string Document type code
+     * @throws InvalidArgumentException When document type is invalid
      */
-    private static function validateRequiredData(array $data): void
+    private static function getDocumentType(string $documentType): string
     {
-        $requiredFields = ['fechaEmision', 'ruc', 'codDoc', 'ambiente', 'secuencial'];
-
-        foreach ($requiredFields as $field) {
-            if (!isset($data[$field]) || empty($data[$field])) {
-                throw new InvalidArgumentException("Required field '{$field}' is missing or empty");
-            }
-        }
-
-        // Validate RUC format (should be 13 digits)
-        if (!preg_match('/^\d{13}$/', $data['ruc'])) {
-            throw new InvalidArgumentException('RUC must be exactly 13 digits');
-        }
-
-        // Validate sequential is numeric
-        if (!is_numeric($data['secuencial'])) {
-            throw new InvalidArgumentException('Sequential must be numeric');
+        switch ($documentType) {
+            case 'invoice':
+                return '01';
+            case 'credit-note':
+                return '04';
+            case 'debit-note':
+                return '05';
+            default:
+                throw new InvalidArgumentException('Invalid document type');
         }
     }
 
@@ -117,8 +112,8 @@ class AccessKeyGenerator
      */
     private static function buildSeries(array $data): string
     {
-        $establishment = $data['estab'] ?? self::DEFAULT_ESTABLISHMENT;
-        $emissionPoint = $data['ptoEmi'] ?? self::DEFAULT_EMISSION_POINT;
+        $establishment = $data['establishment']['code'] ?? self::DEFAULT_ESTABLISHMENT;
+        $emissionPoint = $data['emission_point']['code'] ?? self::DEFAULT_EMISSION_POINT;
 
         return $establishment . $emissionPoint;
     }

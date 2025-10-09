@@ -10,8 +10,6 @@ use DazzaDev\SriSigner\Traits\Signer;
 use DazzaDev\SriXmlGenerator\Enums\Environments;
 use DazzaDev\SriXmlGenerator\Models\Invoice\Invoice;
 
-use DOMDocument;
-
 class Client
 {
     use Certificate;
@@ -43,7 +41,7 @@ class Client
     /**
      * Access key
      */
-    private string $accessKey;
+    public string $accessKey;
 
     /**
      * Constructor

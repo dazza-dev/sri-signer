@@ -6,8 +6,7 @@ use DOMDocument;
 use DazzaDev\SriXmlGenerator\XmlHelper;
 use DazzaDev\SriXmlGenerator\Models\Invoice\Invoice;
 use DazzaDev\SriSigner\Exceptions\DocumentException;
-use Lopezsoft\UBL21dian\Templates\SOAP\SendBillSync;
-use Lopezsoft\UBL21dian\Templates\SOAP\SendTestSetAsync;
+use DazzaDev\SriSigner\AccessKeyGenerator;
 
 trait Document
 {
@@ -20,11 +19,6 @@ trait Document
      * Document data
      */
     private array $documentData;
-
-    /**
-     * Document
-     */
-    private Invoice $document;
 
     /**
      * Document XML
@@ -72,7 +66,20 @@ trait Document
     public function setDocumentData(array $documentData): void
     {
         $this->documentData = $documentData;
-        $this->document = (new Invoice($this->documentData));
+
+        // Set access key
+        $this->accessKey = AccessKeyGenerator::generate(
+            $this->documentType,
+            $documentData
+        );
+
+        // Create document instance
+        $this->document = new Invoice(
+            $this->accessKey,
+            $this->documentData
+        );
+
+        // Generate document XML
         $this->documentXml = (new XmlHelper)->getXml(
             $this->documentType,
             $this->document->toArray()

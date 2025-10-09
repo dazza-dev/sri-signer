@@ -50,7 +50,7 @@ trait Signer
         $objDSig->addReference(
             $qualifyingProperties->getElementsByTagName('SignedProperties')->item(0),
             XMLSecurityDSig::SHA1,
-            null,
+            null, // Passing null to prevent <ds:Transforms/>
             ['overwrite' => false, 'type' => 'http://uri.etsi.org/01903#SignedProperties']
         );
 

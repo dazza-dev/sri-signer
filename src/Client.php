@@ -106,25 +106,7 @@ class Client
         if (isset($this->responseRecepcion->RespuestaRecepcionComprobante->comprobantes)) {
             foreach ($this->responseRecepcion->RespuestaRecepcionComprobante->comprobantes as $comprobante) {
                 foreach ($comprobante->mensajes as $message) {
-                    //  Get message details
-                    $type = $comprobante->tipo ?? 'ERROR';
-                    $code = $message->identificador ?? '0';
-                    $message = $message->mensaje ?? 'Error en recepción';
-                    $additionalInfo = $message->informacionAdicional ?? null;
-
-                    //  Add message to array
-                    if ($format == 'array') {
-                        $formattedMessage = [
-                            'type' => $type,
-                            'code' => $code,
-                            'message' => $message,
-                            'additionalInfo' => $additionalInfo,
-                        ];
-                    } else {
-                        $formattedMessage = $type . ' ' . $code . ': ' . $message . ' ' . $additionalInfo;
-                    }
-
-                    $messages[] = $formattedMessage;
+                    $messages[] = $this->formatMessage($message, $format);
                 }
             }
         }
@@ -138,5 +120,31 @@ class Client
     public function getRecepcionStatus(): ?string
     {
         return $this->responseRecepcion->RespuestaRecepcionComprobante->estado ?? null;
+    }
+
+    /**
+     * Format Messages
+     */
+    public function formatMessage(object $message, string $format = 'array'): array|string
+    {
+        //  Get message details
+        $type = $message->tipo ?? 'ERROR';
+        $code = $message->identificador ?? '0';
+        $message = $message->mensaje ?? 'Error en recepción';
+        $additionalInfo = $message->informacionAdicional ?? null;
+
+        //  Add message to array
+        if ($format == 'array') {
+            $formattedMessage = [
+                'type' => $type,
+                'code' => $code,
+                'message' => $message,
+                'additionalInfo' => $additionalInfo,
+            ];
+        } else {
+            $formattedMessage = $type . ' ' . $code . ': ' . $message . ' ' . $additionalInfo;
+        }
+
+        return $formattedMessage;
     }
 }

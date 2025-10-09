@@ -46,25 +46,22 @@ trait Sender
                 'default_socket_timeout' => 180
             ]);
 
-            $response = $client->validarComprobante([
                 'xml' => $signedXml
             ]);
 
-            $status = $response->RespuestaRecepcionComprobante->estado ?? null;
-            if ($status !== 'RECIBIDA') {
-                // Extract the first error message from the SRI
-                $message = $response->RespuestaRecepcionComprobante->comprobantes->comprobante->mensajes->mensaje ?? null;
-
-                $code = $message->identificador ?? '0';
-                $description = $message->mensaje ?? 'Error en recepción';
-                $additionalInfo = $message->informacionAdicional ?? null;
-
-                throw new Exception($code . ': ' . $description . ' ' . $additionalInfo);
+            // Check if the status is not 'RECIBIDA'
+            if ($this->getRecepcionStatus() !== 'RECIBIDA') {
+                throw new Exception(implode("\n", $this->getRecepcionMessages('string')));
             }
 
             return [
                 'success' => true,
-                'response' => $response
+                'response' => $this->responseRecepcion
+            ];
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
             ];
         } catch (SoapFault $e) {
             return [

@@ -56,16 +56,12 @@ class CertificateValidator
             throw new CertificateCliException($cliValidation['error']);
         }
 
-        // Enable legacy provider for old algorithms
-        //$this->enableLegacyProvider();
-
-        // Intentar método alternativo con soporte legacy
-        echo "Intentando método alternativo con soporte legacy." . PHP_EOL;
+        // Try with legacy support
         $this->certificate = $this->readPkcs12WithLegacySupport($certificateContent);
 
-        if ($this->certificate !== false) {
-            $success = true;
-            echo "Método alternativo exitoso." . PHP_EOL;
+        // Check if legacy support was successful
+        if (! $this->certificate) {
+            throw new CertificateException('Legacy support failed to read certificate.');
         }
 
         return $this->certificate;
@@ -114,9 +110,9 @@ class CertificateValidator
     }
 
     /**
-     * Método alternativo para leer PKCS12 con soporte legacy usando línea de comandos
+     * Alternative method to read PKCS12 with legacy support using command line
      */
-    private function readPkcs12WithLegacySupport(string $certificateContent)
+    private function readPkcs12WithLegacySupport(string $certificateContent): bool
     {
         $passwords = [
             $this->certificatePassword,
@@ -126,49 +122,42 @@ class CertificateValidator
         ];
 
         foreach ($passwords as $index => $password) {
-            echo "Método alternativo CLI: Intentando con variación de clave #" . ($index + 1) . PHP_EOL;
-
-            // Crear archivo temporal para el certificado
+            // Create temporary file for certificate
             $tempCertFile = tempnam(sys_get_temp_dir(), 'cert_') . '.p12';
             file_put_contents($tempCertFile, $certificateContent);
 
             try {
-                // Método 1: Intentar con proveedores legacy explícitos
+                // Extract certificate and private key using legacy providers
                 $certPem = $this->extractCertificateWithLegacy($tempCertFile, $password);
                 $keyPem = $this->extractPrivateKeyWithLegacy($tempCertFile, $password);
 
+                // Create compatible data structure
                 if ($certPem && $keyPem) {
-                    echo "Extracción CLI exitosa con proveedores legacy" . PHP_EOL;
-
-                    // Crear estructura de datos compatible
-                    $certData = [
-                        'cert' => $certPem,
-                        'pkey' => $keyPem
-                    ];
-
+                    $certData = ['cert' => $certPem, 'pkey' => $keyPem];
                     unlink($tempCertFile);
-                    return $certData;
+                    $this->certificate = $certData;
+
+                    return true;
                 }
 
-                // Método 2: Convertir el certificado a formato más moderno
+                // Try modern conversion if legacy failed
                 $modernCertPath = $this->convertToModernPkcs12($tempCertFile, $password);
                 if ($modernCertPath) {
-                    echo "Conversión a formato moderno exitosa, reintentando" . PHP_EOL;
-
                     $modernContent = file_get_contents($modernCertPath);
                     $certData = [];
 
                     if (openssl_pkcs12_read($modernContent, $certData, $password)) {
                         unlink($tempCertFile);
                         unlink($modernCertPath);
+                        $this->certificate = $certData;
 
-                        return $certData;
+                        return true;
                     }
 
                     unlink($modernCertPath);
                 }
             } catch (\Exception $e) {
-                echo "Error en método CLI: " . $e->getMessage() . PHP_EOL;
+                throw new CertificateException("Error en método CLI: " . $e->getMessage());
             } finally {
                 if (file_exists($tempCertFile)) {
                     unlink($tempCertFile);
@@ -221,7 +210,7 @@ class CertificateValidator
     /**
      * Extrae la clave privada usando proveedores legacy
      */
-    private function extractPrivateKeyWithLegacy($certFile, $password)
+    private function extractPrivateKeyWithLegacy(string $certFile, string $password)
     {
         $commands = [
             // Comando con proveedores legacy explícitos

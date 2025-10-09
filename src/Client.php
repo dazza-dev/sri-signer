@@ -130,15 +130,17 @@ class Client
     public function getAutorizacionMessages(string $format = 'array'): array|string
     {
         $messages = [];
-        if (isset($this->responseAutorizacion->RespuestaAutorizacionComprobante->autorizaciones)) {
+        if (isset($this->responseAutorizacion->RespuestaAutorizacionComprobante->autorizaciones->autorizacion)) {
             $autorizacion = $this->responseAutorizacion->RespuestaAutorizacionComprobante->autorizaciones->autorizacion;
-            foreach ($autorizacion->mensajes as $message) {
-                if (is_array($message)) {
-                    foreach ($message as $msg) {
-                        $messages[] = $this->formatMessage($msg, $format);
+            if (isset($autorizacion->mensajes)) {
+                foreach ($autorizacion->mensajes as $message) {
+                    if (is_array($message)) {
+                        foreach ($message as $msg) {
+                            $messages[] = $this->formatMessage($msg, $format);
+                        }
+                    } else {
+                        $messages[] = $this->formatMessage($message, $format);
                     }
-                } else {
-                    $messages[] = $this->formatMessage($message, $format);
                 }
             }
         }
@@ -151,6 +153,10 @@ class Client
      */
     public function getAutorizacionStatus(): ?string
     {
+        if (!isset($this->responseAutorizacion->RespuestaAutorizacionComprobante->autorizaciones->autorizacion)) {
+            return null;
+        }
+
         $autorizacion = $this->responseAutorizacion->RespuestaAutorizacionComprobante
             ->autorizaciones
             ->autorizacion;

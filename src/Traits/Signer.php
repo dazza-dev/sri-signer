@@ -40,6 +40,11 @@ trait Signer
         // Insert signature into XML
         $objDSig->appendSignature($root);
 
+        // Remove Id attribute if present
+        if ($root->hasAttribute('Id')) {
+            $root->removeAttribute('Id');
+        }
+
         return $xml->saveXML($xml);
     }
 }

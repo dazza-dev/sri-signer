@@ -25,7 +25,7 @@ trait Sender
             ]);
 
             $response = $client->validarComprobante([
-                'xml' => base64_encode($signedXml)
+                'xml' => $signedXml
             ]);
 
             $status = $response->RespuestaRecepcionComprobante->estado ?? null;
@@ -36,9 +36,9 @@ trait Sender
 
                 $code = $message->identificador ?? '0';
                 $description = $message->mensaje ?? 'Error en recepción';
-                //$additionalInfo = $message->informacionAdicional ?? null;
+                $additionalInfo = $message->informacionAdicional ?? null;
 
-                throw new Exception($code . ': ' . $description);
+                throw new Exception($code . ': ' . $description . ' ' . $additionalInfo);
             }
 
             return [

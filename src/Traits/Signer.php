@@ -15,11 +15,11 @@ trait Signer
             $root->setAttribute('id', 'comprobante');
         }
 
-        // 3️⃣ Crear objeto de firma
+        // Sign Object
         $objDSig = new XMLSecurityDSig();
         $objDSig->setCanonicalMethod(XMLSecurityDSig::EXC_C14N);
 
-        // Agregar referencia al nodo raíz
+        // Add reference to root node
         $objDSig->addReference(
             $root,
             XMLSecurityDSig::SHA1,
@@ -27,17 +27,17 @@ trait Signer
             ['uri' => '#comprobante']
         );
 
-        // 4️⃣ Crear clave de firma (SHA1 + RSA)
+        // Add key for signing (SHA1 + RSA)
         $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, ['type' => 'private']);
-        $objKey->loadKey($privateKey, false);
+        $objKey->loadKey($this->getPrivateKey(), false);
 
-        // 5️⃣ Firmar el documento
+        // Sign document
         $objDSig->sign($objKey);
 
-        // 6️⃣ Agregar información del certificado público
-        $objDSig->add509Cert($publicCert, true, false, ['issuerSerial' => true]);
+        // Add public certificate information
+        $objDSig->add509Cert($this->getPublicCert(), true, false, ['issuerSerial' => true]);
 
-        // 7️⃣ Insertar la firma dentro del XML
+        // Insert signature into XML
         $objDSig->appendSignature($root);
 
         return $xml->saveXML($xml);

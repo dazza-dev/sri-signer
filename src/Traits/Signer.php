@@ -88,8 +88,15 @@ trait Signer
         // Firmar el documento
         $objDSig->sign($objKey);
 
-        // Añadir la información del certificado (X509Data)
+        // Añadir la información del certificado (X509Data) con cadena completa
         $objDSig->add509Cert($this->getPublicCert(), true, false, ['issuerSerial' => true]);
+        
+        // Agregar certificados intermedios si están disponibles en el certificado
+        if (isset($this->certificateData['extracerts']) && is_array($this->certificateData['extracerts'])) {
+            foreach ($this->certificateData['extracerts'] as $extraCert) {
+                $objDSig->add509Cert($extraCert, false, false);
+            }
+        }
 
         // Establecer el ID del KeyInfo después de que se cree
         $keyInfoNode = $objDSig->sigNode->getElementsByTagName('KeyInfo')->item(0);
@@ -122,11 +129,27 @@ trait Signer
         $cert = $this->getPublicCert();
         $certData = openssl_x509_parse($cert);
 
-        // Extraer el IssuerName y SerialNumber para el X509IssuerSerial
-        // Esta lógica puede variar dependiendo de cómo esté cargando su certificado
-        $issuerName = 'CN=AUTORIDAD DE CERTIFICACION SUBCA-2 SECURITY DATA, OU=ENTIDAD DE CERTIFICACION DE INFORMACION, O=SECURITY DATA S.A. 2, C=EC'; // Reemplazar con valor real
-        $issuerSerial = '238886640'; // Reemplazar con valor real del certificado
-        $certDigestValue = 'eGO//OyySge9HZ027CZUoHvG/jI='; // Reemplazar con el SHA1 del certificado
+        // Extraer el IssuerName en el formato correcto para SRI Ecuador
+        // Formato requerido: CN=..., OU=..., O=..., C=...
+        $issuerParts = [];
+        if (isset($certData['issuer']['CN'])) {
+            $issuerParts[] = 'CN=' . $certData['issuer']['CN'];
+        }
+        if (isset($certData['issuer']['OU'])) {
+            $issuerParts[] = 'OU=' . $certData['issuer']['OU'];
+        }
+        if (isset($certData['issuer']['O'])) {
+            $issuerParts[] = 'O=' . $certData['issuer']['O'];
+        }
+        if (isset($certData['issuer']['C'])) {
+            $issuerParts[] = 'C=' . $certData['issuer']['C'];
+        }
+        $issuerName = implode(',', $issuerParts);
+        $issuerSerial = (string) $certData['serialNumber'];
+        
+        // Calcular el digest SHA1 del certificado DER (binario)
+        $certBinary = base64_decode(preg_replace('/-----[^-]+-----/', '', $cert));
+        $certDigestValue = base64_encode(sha1($certBinary, true));
 
         // Namespaces XAdES
         $etsiNS = 'http://uri.etsi.org/01903/v1.3.2#';
@@ -181,10 +204,11 @@ trait Signer
         // --- etsi:SignedDataObjectProperties ---
         $signedDataObjectProperties = $xml->createElementNS($etsiNS, 'etsi:SignedDataObjectProperties');
         $dataObjectFormat = $xml->createElementNS($etsiNS, 'etsi:DataObjectFormat');
-        $dataObjectFormat->setAttribute('ObjectReference', 'Reference-' . $uniqueId); // Usar el ID consistente
+        $dataObjectFormat->setAttribute('ObjectReference', '#Reference-' . $uniqueId); // Usar el ID consistente con #
 
         $description = $xml->createElementNS($etsiNS, 'etsi:Description', 'contenido comprobante');
         $mimeType = $xml->createElementNS($etsiNS, 'etsi:MimeType', 'text/xml');
+
         $dataObjectFormat->appendChild($description);
         $dataObjectFormat->appendChild($mimeType);
         $signedDataObjectProperties->appendChild($dataObjectFormat);

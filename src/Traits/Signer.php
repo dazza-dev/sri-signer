@@ -37,7 +37,6 @@ trait Signer
 
         $objNode = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:Object');
         $objNode->appendChild($qualifyingProperties);
-        $root->appendChild($objNode);
 
         // --- 4. Agregar las 3 Referencias Requeridas por XAdES ---
 
@@ -65,7 +64,7 @@ trait Signer
         $objDSig->addReference(
             $qualifyingProperties,
             XMLSecurityDSig::SHA1,
-            [],
+            ['http://www.w3.org/2001/10/xml-exc-c14n#'], // <-- Añadir C14N Exclusiva
             ['uri' => '#' . $signedPropsId, 'type' => 'http://uri.etsi.org/01903#SignedProperties']
         );
 
@@ -85,6 +84,9 @@ trait Signer
         // El 'ds:Signature' debe estar en el XML *antes* de calcular las referencias.
         // Usamos esta referencia temporal para generar el SignedInfo y luego calcular los DigestValues
         $objDSig->appendSignature($root);
+
+        // --- CORRECCIÓN: Adjuntar el ds:Object después de la firma ---
+        $root->appendChild($objNode);
 
         // Cleanup: Eliminar el 'Id' del nodo raíz si fue agregado temporalmente.
         if ($root->hasAttribute('Id')) {

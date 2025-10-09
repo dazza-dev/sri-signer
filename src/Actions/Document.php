@@ -39,7 +39,9 @@ trait Document
         $this->signDocument();
 
         // Save the XML document to signed.xml file
+        echo 'Guardando archivo signed.xml' . PHP_EOL;
         file_put_contents(__DIR__ . '/signed.xml', $this->signedDocument);
+        echo 'Archivo signed.xml guardado exitosamente!' . PHP_EOL;
 
         // Send document
         $validate = $this->validate($this->signedDocument);

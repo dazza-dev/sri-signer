@@ -58,6 +58,9 @@ trait Document
             throw new DocumentException($authorize['status'] . ' - ' . $authorize['error']);
         }
 
+        print_r($authorize);
+        echo 'Documento autorizado exitosamente!' . PHP_EOL;
+
         return $this->signedDocument;
     }
 

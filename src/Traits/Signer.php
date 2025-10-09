@@ -19,7 +19,7 @@ trait Signer
         // --- 1. Inicialización de la Firma y Canonicalización ---
         $objDSig = new XMLSecurityDSig();
 
-        // CORRECCIÓN 1: Usar C14N (Canonicalización No Exclusiva)
+        // CORRECCIÓN: Usar C14N (Canonicalización No Exclusiva) como en archivo válido SRI
         $objDSig->setCanonicalMethod(XMLSecurityDSig::C14N);
 
         // --- 2. Crear IDs y Nombres Requeridos para XAdES ---
@@ -44,40 +44,35 @@ trait Signer
         // CORRECCIÓN: Evitar namespaces duplicados en el ds:Object
         $objNode->appendChild($qualifyingProperties);
 
-        // --- 4. Agregar las Referencias Requeridas por XAdES ---
-        // CORRECCIÓN: Usar 'overwrite' => false para que use IDs existentes
-
-        // Establecer el ID del documento principal temporalmente
-        $root->setAttribute('Id', 'comprobante');
-
-        // Crear elementos temporales para las referencias que no existen aún
-        $tempKeyInfo = $xml->createElement('KeyInfo');
-        $tempKeyInfo->setAttribute('Id', $keyInfoId);
-
-        $tempSignedProps = $xml->createElement('SignedProperties');
-        $tempSignedProps->setAttribute('Id', $signedPropsId);
-
-        // a) Referencia al KeyInfo (usando elemento temporal con overwrite=false)
+        // --- 4. Agregar Referencias para la Firma ---
+        // CORRECCIÓN: Agregar referencia al KeyInfo primero como en archivo válido SRI
+        $keyInfoNode = $objDSig->sigNode->getElementsByTagName('KeyInfo')->item(0);
+        if (!$keyInfoNode) {
+            // Crear un KeyInfo temporal para la referencia
+            $keyInfoNode = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:KeyInfo');
+            $keyInfoNode->setAttribute('Id', $keyInfoId);
+        }
+        
         $objDSig->addReference(
-            $tempKeyInfo,
+            $keyInfoNode,
             XMLSecurityDSig::SHA1,
-            [XMLSecurityDSIG::EXC_C14N],
+            [],
             ['overwrite' => false]
         );
 
-        // b) Referencia a Factura (documento principal con overwrite=false)
+        // Referencia al documento principal (comprobante)
         $objDSig->addReference(
             $root,
             XMLSecurityDSig::SHA1,
             ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
-            ['overwrite' => false, 'id' => 'Reference-' . $uniqueId]
+            ['id_name' => 'id', 'overwrite' => false]
         );
 
-        // c) Referencia al 'etsi:SignedProperties' (usando elemento temporal con overwrite=false)
+        // Referencia a las propiedades firmadas (XAdES)
         $objDSig->addReference(
-            $tempSignedProps,
+            $qualifyingProperties->getElementsByTagName('SignedProperties')->item(0),
             XMLSecurityDSig::SHA1,
-            [XMLSecurityDSIG::EXC_C14N],
+            [XMLSecurityDSIG::C14N],
             ['overwrite' => false, 'type' => 'http://uri.etsi.org/01903#SignedProperties']
         );
 
@@ -202,7 +197,7 @@ trait Signer
         // --- etsi:SignedDataObjectProperties ---
         $signedDataObjectProperties = $xml->createElementNS($etsiNS, 'etsi:SignedDataObjectProperties');
         $dataObjectFormat = $xml->createElementNS($etsiNS, 'etsi:DataObjectFormat');
-        $dataObjectFormat->setAttribute('ObjectReference', '#Reference-' . $uniqueId); // Usar el ID consistente con #
+        $dataObjectFormat->setAttribute('ObjectReference', '#comprobante'); // Referencia correcta al documento
 
         $description = $xml->createElementNS($etsiNS, 'etsi:Description', 'contenido comprobante');
         $mimeType = $xml->createElementNS($etsiNS, 'etsi:MimeType', 'text/xml');

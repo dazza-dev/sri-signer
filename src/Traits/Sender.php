@@ -57,17 +57,20 @@ trait Sender
 
             return [
                 'success' => true,
+                'status' => $this->getRecepcionStatus(),
                 'response' => $this->responseRecepcion,
                 'messages' => $this->getRecepcionMessages()
             ];
         } catch (Exception $e) {
             return [
                 'success' => false,
+                'status' => $this->getRecepcionStatus(),
                 'error' => $e->getMessage()
             ];
         } catch (SoapFault $e) {
             return [
                 'success' => false,
+                'status' => 'ERROR',
                 'error' => 'Error de conexión con el SRI: ' . $e->getMessage()
             ];
         }
@@ -98,6 +101,7 @@ trait Sender
 
                     return [
                         'success' => true,
+                        'status' => $this->getAutorizacionStatus(),
                         'response' => $this->responseAutorizacion,
                         'messages' => $this->getAutorizacionMessages()
                     ];
@@ -115,11 +119,13 @@ trait Sender
         } catch (Exception $e) {
             return [
                 'success' => false,
+                'status' => $this->getAutorizacionStatus(),
                 'error' => $e->getMessage()
             ];
         } catch (SoapFault $e) {
             return [
                 'success' => false,
+                'status' => 'ERROR',
                 'error' => 'Error de conexión con el SRI: ' . $e->getMessage()
             ];
         }

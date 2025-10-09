@@ -61,7 +61,7 @@ trait Signer
         $objDSig->addReference(
             $tempKeyInfo,
             XMLSecurityDSig::SHA1,
-            [],
+            [XMLSecurityDSIG::EXC_C14N],
             ['overwrite' => false]
         );
 
@@ -77,7 +77,7 @@ trait Signer
         $objDSig->addReference(
             $tempSignedProps,
             XMLSecurityDSig::SHA1,
-            [],
+            [XMLSecurityDSIG::EXC_C14N],
             ['overwrite' => false, 'type' => 'http://uri.etsi.org/01903#SignedProperties']
         );
 

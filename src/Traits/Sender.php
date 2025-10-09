@@ -46,6 +46,7 @@ trait Sender
                 'default_socket_timeout' => 180
             ]);
 
+            $this->responseRecepcion = $client->validarComprobante([
                 'xml' => $signedXml
             ]);
 

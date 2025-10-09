@@ -104,10 +104,9 @@ class Client
     {
         $messages = [];
         if (isset($this->responseRecepcion->RespuestaRecepcionComprobante->comprobantes)) {
-            foreach ($this->responseRecepcion->RespuestaRecepcionComprobante->comprobantes as $comprobante) {
-                foreach ($comprobante->mensajes as $message) {
-                    $messages[] = $this->formatMessage($message, $format);
-                }
+            $comprobante = $this->responseRecepcion->RespuestaRecepcionComprobante->comprobantes->comprobante;
+            foreach ($comprobante->mensajes as $message) {
+                $messages[] = $this->formatMessage($message, $format);
             }
         }
 

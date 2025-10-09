@@ -103,7 +103,10 @@ class Client
     public function getRecepcionMessages(string $format = 'array'): array|string
     {
         $messages = [];
-        if (isset($this->responseRecepcion->RespuestaRecepcionComprobante->comprobantes)) {
+        if (isset($this->responseRecepcion->RespuestaRecepcionComprobante->comprobantes) &&
+            isset($this->responseRecepcion->RespuestaRecepcionComprobante->comprobantes->comprobante) &&
+            isset($this->responseRecepcion->RespuestaRecepcionComprobante->comprobantes->comprobante->mensajes)) {
+            
             $comprobante = $this->responseRecepcion->RespuestaRecepcionComprobante->comprobantes->comprobante;
             foreach ($comprobante->mensajes as $message) {
                 $messages[] = $this->formatMessage($message, $format);

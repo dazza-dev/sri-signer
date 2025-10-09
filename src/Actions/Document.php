@@ -38,6 +38,9 @@ trait Document
         // Sign document
         $this->signDocument();
 
+        // Save the XML document to signed.xml file
+        file_put_contents(__DIR__ . '/signed.xml', $this->signedDocument);
+
         // Send document
         $validate = $this->validate($this->signedDocument);
 
@@ -48,13 +51,10 @@ trait Document
         sleep(3);
 
         $authorize = $this->authorize($this->getAccessKey());
-        //$authorize = $this->authorize('0310202501019512705000110010010000000081680242518');
 
         if (!$authorize['success']) {
             throw new DocumentException($authorize['status'] . ' - ' . $authorize['error']);
         }
-
-        print_r($authorize);
 
         return $this->signedDocument;
     }

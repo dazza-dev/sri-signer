@@ -39,7 +39,22 @@ trait Document
         $this->signDocument();
 
         // Send document
-        $this->validate($this->signedDocument);
+        $validate = $this->validate($this->signedDocument);
+
+        if (!$validate['success']) {
+            throw new DocumentException($validate['status'] . ' - ' . $validate['error']);
+        }
+
+        sleep(3);
+
+        $authorize = $this->authorize($this->getAccessKey());
+        //$authorize = $this->authorize('0310202501019512705000110010010000000081680242518');
+
+        if (!$authorize['success']) {
+            throw new DocumentException($authorize['status'] . ' - ' . $authorize['error']);
+        }
+
+        print_r($authorize);
 
         return $this->signedDocument;
     }

@@ -97,9 +97,15 @@ trait Signer
             $keyInfoNode->setAttribute('Id', $keyInfoId);
         }
 
-        // --- CORRECCIÓN: Adjuntar el ds:Object después de la firma ---
+        // --- CORRECCIÓN: Adjuntar el ds:Object DENTRO del elemento ds:Signature ---
         $objDSig->appendSignature($root);
-        $root->appendChild($objNode);
+        
+        // Obtener el nodo ds:Signature y agregar ds:Object dentro de él
+        $signatureNode = $objDSig->sigNode;
+        
+        // CORRECCIÓN: Importar el nodo ds:Object al documento de la firma antes de agregarlo
+        $importedObjNode = $signatureNode->ownerDocument->importNode($objNode, true);
+        $signatureNode->appendChild($importedObjNode);
 
         // Cleanup: Eliminar el 'Id' del nodo raíz si fue agregado temporalmente.
         if ($root->hasAttribute('Id')) {

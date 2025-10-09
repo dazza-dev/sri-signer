@@ -57,7 +57,7 @@ class CertificateValidator
         }
 
         // Try with legacy support
-        $this->certificate = $this->readPkcs12WithLegacySupport($certificateContent);
+        $this->readPkcs12WithLegacySupport($certificateContent);
 
         // Check if legacy support was successful
         if (! $this->certificate) {
@@ -171,7 +171,7 @@ class CertificateValidator
     /**
      * Extrae el certificado usando proveedores legacy
      */
-    private function extractCertificateWithLegacy($certFile, $password)
+    private function extractCertificateWithLegacy(string $certFile, string $password): ?string
     {
         $commands = [
             // Comando con proveedores legacy explícitos
@@ -199,18 +199,17 @@ class CertificateValidator
         foreach ($commands as $command) {
             $output = shell_exec($command);
             if ($output && strpos($output, 'BEGIN CERTIFICATE') !== false) {
-                echo "Certificado extraído exitosamente" . PHP_EOL;
                 return $output;
             }
         }
 
-        return false;
+        return null;
     }
 
     /**
      * Extrae la clave privada usando proveedores legacy
      */
-    private function extractPrivateKeyWithLegacy(string $certFile, string $password)
+    private function extractPrivateKeyWithLegacy(string $certFile, string $password): ?string
     {
         $commands = [
             // Comando con proveedores legacy explícitos
@@ -239,18 +238,17 @@ class CertificateValidator
             $output = shell_exec($command);
             if ($output && (strpos($output, 'BEGIN PRIVATE KEY') !== false ||
                 strpos($output, 'BEGIN RSA PRIVATE KEY') !== false)) {
-                echo "Clave privada extraída exitosamente" . PHP_EOL;
                 return $output;
             }
         }
 
-        return false;
+        return null;
     }
 
     /**
-     * Convierte el certificado PKCS12 a un formato más moderno
+     * Convert a legacy PKCS12 certificate to a modern format
      */
-    private function convertToModernPkcs12($oldCertFile, $password)
+    private function convertToModernPkcs12(string $oldCertFile, string $password): ?string
     {
         try {
             $tempPemFile = tempnam(sys_get_temp_dir(), 'cert_pem_') . '.pem';
@@ -278,7 +276,6 @@ class CertificateValidator
                 $result2 = shell_exec($convertToPkcs12Command);
 
                 if (file_exists($modernCertFile) && filesize($modernCertFile) > 0) {
-                    echo "Conversión a formato moderno exitosa" . PHP_EOL;
                     unlink($tempPemFile);
                     return $modernCertFile;
                 }
@@ -288,10 +285,10 @@ class CertificateValidator
             if (file_exists($tempPemFile)) unlink($tempPemFile);
             if (file_exists($modernCertFile)) unlink($modernCertFile);
         } catch (\Exception $e) {
-            echo "Error en conversión a formato moderno: " . $e->getMessage() . PHP_EOL;
+            throw new CertificateException("Error en conversión a formato moderno: " . $e->getMessage());
         }
 
-        return false;
+        return null;
     }
 
     /**

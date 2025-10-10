@@ -102,15 +102,55 @@ trait Certificate
     public function getCleanX509Certificate(): string
     {
         $certPem = $this->certificateData['cert'];
-        
+
         // Extract only the certificate content between BEGIN and END markers
         $pattern = '/-----BEGIN CERTIFICATE-----\s*(.*?)\s*-----END CERTIFICATE-----/s';
         if (preg_match($pattern, $certPem, $matches)) {
             // Remove any whitespace and newlines from the base64 content
             return preg_replace('/\s+/', '', $matches[1]);
         }
-        
+
         throw new CertificateException('Could not extract clean X509 certificate data');
+    }
+
+    /**
+     * Format issuer name according to SRI requirements
+     */
+    public function formatIssuerName(array $issuer): string
+    {
+        $parts = [];
+
+        // Order according to SRI format: CN, L, OU, O, C
+        if (isset($issuer['CN'])) {
+            $parts[] = 'CN=' . $issuer['CN'];
+        }
+        if (isset($issuer['L'])) {
+            $parts[] = 'L=' . $issuer['L'];
+        }
+        if (isset($issuer['OU'])) {
+            $parts[] = 'OU=' . $issuer['OU'];
+        }
+        if (isset($issuer['O'])) {
+            $parts[] = 'O=' . $issuer['O'];
+        }
+        if (isset($issuer['C'])) {
+            $parts[] = 'C=' . $issuer['C'];
+        }
+
+        return implode(',', $parts);
+    }
+
+    /**
+     * Get certificate details parsed from the certificate
+     */
+    public function getCertificateDetails(): array
+    {
+        $certDetails = openssl_x509_parse($this->getPublicCert());
+        if ($certDetails === false) {
+            throw new CertificateException('Unable to parse certificate details');
+        }
+
+        return $certDetails;
     }
 
     /**

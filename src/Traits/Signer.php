@@ -290,11 +290,11 @@ trait Signer
      */
     private function calculateReferenceHashes(DOMDocument $xml, DOMElement $signedInfo, DOMElement $keyInfo, DOMElement $object): void
     {
-        $references = $signedInfo->getElementsByTagName('Reference');
+        $references = $signedInfo->getElementsByTagName('ds:Reference');
 
         foreach ($references as $reference) {
             $uri = $reference->getAttribute('URI');
-            $digestValue = $reference->getElementsByTagName('DigestValue')->item(0);
+            $digestValue = $reference->getElementsByTagName('ds:DigestValue')->item(0);
 
             if (strpos($uri, '#Signature') === 0 && strpos($uri, 'SignedProperties') !== false) {
                 // Hash of SignedProperties
@@ -311,7 +311,7 @@ trait Signer
                 // Hash of comprobante (root element without signature)
                 $rootClone = $xml->documentElement->cloneNode(true);
                 // Remove any existing signature elements
-                $signatures = $rootClone->getElementsByTagName('Signature');
+                $signatures = $rootClone->getElementsByTagName('ds:Signature');
                 while ($signatures->length > 0) {
                     $signatures->item(0)->parentNode->removeChild($signatures->item(0));
                 }

@@ -97,6 +97,23 @@ trait Certificate
     }
 
     /**
+     * Get clean X509 certificate data without metadata for XML signing
+     */
+    public function getCleanX509Certificate(): string
+    {
+        $certPem = $this->certificateData['cert'];
+        
+        // Extract only the certificate content between BEGIN and END markers
+        $pattern = '/-----BEGIN CERTIFICATE-----\s*(.*?)\s*-----END CERTIFICATE-----/s';
+        if (preg_match($pattern, $certPem, $matches)) {
+            // Remove any whitespace and newlines from the base64 content
+            return preg_replace('/\s+/', '', $matches[1]);
+        }
+        
+        throw new CertificateException('Could not extract clean X509 certificate data');
+    }
+
+    /**
      * Get private key
      */
     public function getPrivateKey(): string

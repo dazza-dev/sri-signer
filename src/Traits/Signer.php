@@ -354,4 +354,30 @@ trait Signer
 
         return $signatureValue;
     }
+
+    /**
+     * Convert hexadecimal serial number to decimal format
+     */
+    public function hexToDecimal(string $hex): string
+    {
+        // Remove any spaces or colons from hex string
+        $hex = str_replace([':', ' '], '', $hex);
+
+        // Convert hex to decimal using bcmath for large numbers
+        if (function_exists('bcadd')) {
+            $decimal = '0';
+            $base = '1';
+
+            for ($i = strlen($hex) - 1; $i >= 0; $i--) {
+                $digit = hexdec($hex[$i]);
+                $decimal = bcadd($decimal, bcmul($digit, $base));
+                $base = bcmul($base, '16');
+            }
+
+            return $decimal;
+        }
+
+        // Fallback for systems without bcmath
+        return (string) hexdec($hex);
+    }
 }

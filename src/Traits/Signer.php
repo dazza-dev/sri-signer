@@ -294,9 +294,8 @@ trait Signer
                 $hash = base64_encode(sha1($canonicalized, true));
                 $digestValue->nodeValue = $hash;
             } elseif (strpos($uri, '#Certificate') === 0) {
-                // Hash of KeyInfo
-                $canonicalized = $this->canonicalizeElement($keyInfo);
-                $hash = base64_encode(sha1($canonicalized, true));
+                // Hash of X509 certificate in DER format (as per SRI documentation)
+                $hash = base64_encode(sha1(base64_decode($this->getCleanX509Certificate()), true));
                 $digestValue->nodeValue = $hash;
             } elseif ($uri === '#comprobante') {
                 // Hash of comprobante (root element without signature)

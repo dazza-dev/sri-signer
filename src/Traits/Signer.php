@@ -298,7 +298,7 @@ trait Signer
 
             if (strpos($uri, '#Signature') === 0 && strpos($uri, 'SignedProperties') !== false) {
                 // Hash of SignedProperties
-                $signedProperties = $object->getElementsByTagName('SignedProperties')->item(0);
+                $signedProperties = $object->getElementsByTagName('etsi:SignedProperties')->item(0);
                 $canonicalized = $this->canonicalizeElement($signedProperties);
                 $hash = base64_encode(sha1($canonicalized, true));
                 $digestValue->nodeValue = $hash;

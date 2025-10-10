@@ -87,7 +87,7 @@ trait Signer
         $objDSig->addReference(
             $root,
             XMLSecurityDSig::SHA1,
-            null,
+            ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
             ['id_name' => 'id', 'overwrite' => false]
         );
 

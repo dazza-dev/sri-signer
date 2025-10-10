@@ -24,14 +24,37 @@ trait Signer
         $signatureElement = $this->createSignatureStructure($xml);
         $xml->documentElement->appendChild($signatureElement);
 
-        // Get the formatted XML with proper indentation
+        // Get the formatted XML with proper indentation but remove signature indentation
         $xml->formatOutput = true;
         $xmlString = $xml->saveXML();
+
+        // Remove indentation from signature elements only
+        $xmlString = $this->removeSignatureIndentation($xmlString);
 
         // Remove the signature element from the original document
         $xml->documentElement->removeChild($signatureElement);
 
         return $xmlString;
+    }
+
+    /**
+     * Remove indentation from signature elements while preserving original XML formatting
+     */
+    private function removeSignatureIndentation(string $xmlString): string
+    {
+        // Pattern to match signature elements with indentation
+        $pattern = '/(\s+)(<ds:Signature[^>]*>.*?<\/ds:Signature>)/s';
+
+        return preg_replace_callback($pattern, function ($matches) {
+            $indentation = $matches[1];
+            $signatureContent = $matches[2];
+
+            // Remove all indentation from signature content
+            $signatureContent = preg_replace('/\n\s+/', '', $signatureContent);
+
+            // Return signature without indentation but preserve the original line break
+            return "\n" . $signatureContent;
+        }, $xmlString);
     }
 
     /**
@@ -300,12 +323,29 @@ trait Signer
             } elseif ($uri === '#comprobante') {
                 // Hash of comprobante (root element without signature)
                 $rootClone = $xml->documentElement->cloneNode(true);
-                // Remove any existing signature elements
-                $signatures = $rootClone->getElementsByTagName('ds:Signature');
+
+                // Create a new document and import the cloned element
+                $tempDoc = new DOMDocument('1.0', 'UTF-8');
+                $importedRoot = $tempDoc->importNode($rootClone, true);
+                $tempDoc->appendChild($importedRoot);
+
+                // Remove any existing signature elements from the imported element
+                $signatures = $importedRoot->getElementsByTagName('Signature');
+                $removedCount = 0;
                 while ($signatures->length > 0) {
                     $signatures->item(0)->parentNode->removeChild($signatures->item(0));
+                    $removedCount++;
                 }
-                $hash = base64_encode(sha1($rootClone->C14N(), true));
+
+                // Also check for ds:Signature elements
+                $dsSignatures = $importedRoot->getElementsByTagNameNS('http://www.w3.org/2000/09/xmldsig#', 'Signature');
+                while ($dsSignatures->length > 0) {
+                    $dsSignatures->item(0)->parentNode->removeChild($dsSignatures->item(0));
+                    $removedCount++;
+                }
+
+                $canonicalized = $importedRoot->C14N();
+                $hash = base64_encode(sha1($canonicalized, true));
                 $digestValue->nodeValue = $hash;
             }
         }
@@ -316,11 +356,19 @@ trait Signer
      */
     private function canonicalizeElement(DOMElement $element)
     {
-        // Add required namespaces for canonicalization
-        $element->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
-        $element->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:etsi', 'http://uri.etsi.org/01903/v1.3.2#');
+        // Create a new document to ensure proper namespace context
+        $tempDoc = new DOMDocument('1.0', 'UTF-8');
 
-        return $element->C14N();
+        // Import the element into the new document with deep copy
+        $importedElement = $tempDoc->importNode($element, true);
+        $tempDoc->appendChild($importedElement);
+
+        // Ensure namespaces are properly declared on the root element
+        $importedElement->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
+        $importedElement->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:etsi', 'http://uri.etsi.org/01903/v1.3.2#');
+
+        // Use C14N on the imported element
+        return $importedElement->C14N();
     }
 
     /**

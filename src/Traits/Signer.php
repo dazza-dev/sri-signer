@@ -20,13 +20,32 @@ trait Signer
         // Generate the 8 random numbers required for XAdES structure
         $this->generateRandomNumbers();
 
-        // Create signature structure
+        // Create signature structure as a compact single line
         $signatureElement = $this->createSignatureStructure($xml);
 
-        // Append signature to the root element
-        $xml->documentElement->appendChild($signatureElement);
+        // Create a temporary document to generate the signature without indentation
+        $tempDoc = new DOMDocument();
+        $tempDoc->formatOutput = false;
+        $tempDoc->preserveWhiteSpace = false;
+        $tempSignature = $tempDoc->importNode($signatureElement, true);
+        $tempDoc->appendChild($tempSignature);
+        $compactSignature = $tempDoc->saveXML($tempSignature);
 
-        return $xml->saveXML();
+        // Remove the signature element if it was already added
+        if ($signatureElement->parentNode) {
+            $signatureElement->parentNode->removeChild($signatureElement);
+        }
+
+        // Get the formatted XML with proper indentation
+        $xml->formatOutput = true;
+        $xmlString = $xml->saveXML();
+
+        // Insert the compact signature before the closing root tag
+        $rootTagName = $xml->documentElement->tagName;
+        $closingTag = "</$rootTagName>";
+        $xmlString = str_replace($closingTag, $compactSignature . $closingTag, $xmlString);
+
+        return $xmlString;
     }
 
     /**

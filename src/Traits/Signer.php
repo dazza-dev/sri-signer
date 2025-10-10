@@ -47,12 +47,25 @@ trait Signer
         // --- 4. Agregar Referencias para la Firma ---
 
         // Referencia a las propiedades firmadas (XAdES)
-        $objDSig->addReference(
-            $qualifyingProperties->getElementsByTagName('SignedProperties')->item(0),
-            XMLSecurityDSig::SHA1,
-            null, // Passing null to prevent <ds:Transforms/>
-            ['overwrite' => false, 'type' => 'http://uri.etsi.org/01903#SignedProperties']
-        );
+        $signedPropertiesNode = $qualifyingProperties->getElementsByTagName('SignedProperties')->item(0);
+        $signedPropertiesID = $signedPropertiesNode->getAttribute('Id');
+        $signedPropertiesDigest = base64_encode(sha1($signedPropertiesNode->C14N(true, false), true));
+
+        $referenceNode = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:Reference');
+        $referenceNode->setAttribute('Type', 'http://uri.etsi.org/01903#SignedProperties');
+        $referenceNode->setAttribute('URI', '#' . $signedPropertiesID);
+
+        $digestMethodNode = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:DigestMethod');
+        $digestMethodNode->setAttribute('Algorithm', XMLSecurityDSig::SHA1);
+
+        $digestValueNode = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:DigestValue', $signedPropertiesDigest);
+
+        $referenceNode->appendChild($digestMethodNode);
+        $referenceNode->appendChild($digestValueNode);
+
+        $signedInfoNode = $objDSig->sigNode->getElementsByTagName('SignedInfo')->item(0);
+        $importedReferenceNode = $signedInfoNode->ownerDocument->importNode($referenceNode, true);
+        $signedInfoNode->appendChild($importedReferenceNode);
 
         //
         $keyInfoNode = $objDSig->sigNode->getElementsByTagName('KeyInfo')->item(0);

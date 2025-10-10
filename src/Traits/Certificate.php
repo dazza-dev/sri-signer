@@ -120,7 +120,7 @@ trait Certificate
     public function getFormattedX509Certificate(): string
     {
         $cleanCert = $this->getCleanX509Certificate();
-        
+
         // Insert line breaks every 76 characters as per SRI documentation
         return preg_replace('/.{76}/', '$0' . "\n", $cleanCert);
     }

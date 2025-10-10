@@ -138,7 +138,7 @@ trait Signer
         // Reference to comprobante (root element)
         $reference3 = $xml->createElement('ds:Reference');
         $reference3->setAttribute('Id', 'Reference-ID-' . $this->randomNumbers['referenceId']);
-        $reference3->setAttribute('URI', '');
+        $reference3->setAttribute('URI', '#comprobante');
 
         $transforms3 = $xml->createElement('ds:Transforms');
         $transform3 = $xml->createElement('ds:Transform');
@@ -170,13 +170,8 @@ trait Signer
         $x509Data = $xml->createElement('ds:X509Data');
         $x509Certificate = $xml->createElement('ds:X509Certificate');
 
-        // Extract certificate in PEM format without headers and format to 76 chars per line
-        $certData = $this->getPublicCert();
-        $certPem = str_replace(['-----BEGIN CERTIFICATE-----', '-----END CERTIFICATE-----', "\n", "\r"], '', $certData);
-        $certFormatted = chunk_split($certPem, 76, "\n");
-        $certFormatted = trim($certFormatted);
-
-        $x509Certificate->nodeValue = $certFormatted;
+        // Get clean certificate data without metadata
+        $x509Certificate->nodeValue = $this->getCleanX509Certificate();
         $x509Data->appendChild($x509Certificate);
         $keyInfo->appendChild($x509Data);
 
@@ -236,10 +231,7 @@ trait Signer
 
         $digestValue = $xml->createElement('ds:DigestValue');
         // Calculate SHA1 hash of certificate in DER format
-        $certDer = openssl_x509_read($this->getPublicCert());
-        openssl_x509_export($certDer, $certPem);
-        $certDerBinary = base64_decode(str_replace(['-----BEGIN CERTIFICATE-----', '-----END CERTIFICATE-----', "\n", "\r"], '', $certPem));
-        $digestValue->nodeValue = base64_encode(sha1($certDerBinary, true));
+        $digestValue->nodeValue = base64_encode(sha1(base64_decode($this->getCleanX509Certificate()), true));
         $certDigest->appendChild($digestValue);
         $cert->appendChild($certDigest);
 
@@ -303,7 +295,7 @@ trait Signer
                 $canonicalized = $this->canonicalizeElement($keyInfo);
                 $hash = base64_encode(sha1($canonicalized, true));
                 $digestValue->nodeValue = $hash;
-            } elseif ($uri === '') {
+            } elseif ($uri === '#comprobante') {
                 // Hash of comprobante (root element without signature)
                 $rootClone = $xml->documentElement->cloneNode(true);
                 // Remove any existing signature elements

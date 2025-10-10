@@ -168,7 +168,7 @@ trait Signer
         $x509Certificate = $xml->createElement('ds:X509Certificate');
 
         // Get formatted certificate data with line breaks every 76 characters
-        $x509Certificate->nodeValue = $this->getFormattedX509Certificate();
+        $x509Certificate->nodeValue = $this->getCleanX509Certificate();
         $x509Data->appendChild($x509Certificate);
         $keyInfo->appendChild($x509Data);
 

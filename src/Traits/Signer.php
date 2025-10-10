@@ -6,6 +6,7 @@ use DOMDocument;
 use DOMElement;
 use DateTime;
 use DateTimeZone;
+use Exception;
 
 trait Signer
 {
@@ -237,12 +238,18 @@ trait Signer
 
         $issuerSerial = $xml->createElement('etsi:IssuerSerial');
         $x509IssuerName = $xml->createElement('ds:X509IssuerName');
-        $x509IssuerName->nodeValue = 'CN=AC BANCO CENTRAL DEL ECUADOR,L=QUITO,OU=ENTIDAD DE CERTIFICACION DE INFORMACION-ECIBCE,O=BANCO CENTRAL DEL ECUADOR,C=EC';
+
+        // Extract issuer name from certificate instead of using hardcoded value
+        $certDetails = $this->getCertificateDetails();
+        $issuerName = $this->formatIssuerName($certDetails['issuer']);
+        $x509IssuerName->nodeValue = $issuerName;
         $issuerSerial->appendChild($x509IssuerName);
 
         $x509SerialNumber = $xml->createElement('ds:X509SerialNumber');
-        $certDetails = openssl_x509_parse($this->getPublicCert());
-        $x509SerialNumber->nodeValue = $certDetails['serialNumber'];
+        // Convert serial number from hex to decimal format
+        $serialHex = $certDetails['serialNumber'];
+        $serialDecimal = $this->hexToDecimal($serialHex);
+        $x509SerialNumber->nodeValue = $serialDecimal;
         $issuerSerial->appendChild($x509SerialNumber);
 
         $cert->appendChild($issuerSerial);
@@ -335,12 +342,12 @@ trait Signer
         // Sign with private key
         $privateKey = openssl_pkey_get_private($this->getPrivateKey());
         if (!$privateKey) {
-            throw new \Exception("Failed to load private key");
+            throw new Exception("Failed to load private key");
         }
 
         $signature = '';
         if (!openssl_sign($canonicalized, $signature, $privateKey, OPENSSL_ALGO_SHA1)) {
-            throw new \Exception("Failed to create digital signature");
+            throw new Exception("Failed to create digital signature");
         }
 
         $signatureValue->nodeValue = base64_encode($signature);

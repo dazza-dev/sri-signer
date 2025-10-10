@@ -109,7 +109,7 @@ trait Sender
                     throw new Exception('Error de conexión con el SRI: ' . $e->getMessage());
                 } catch (Exception $e) {
                     if ($intentos >= $maxIntentos) {
-                        throw new Exception('Error inesperado en autorización: ' . $e->getMessage());
+                        throw new Exception($e->getMessage());
                     }
                     sleep(1);
                 }

@@ -319,7 +319,7 @@ trait Signer
     /**
      * Canonicalize an element with proper namespaces
      */
-    private function canonicalizeElement(DOMElement $element): string
+    private function canonicalizeElement(DOMElement $element)
     {
         // Add required namespaces for canonicalization
         $element->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');

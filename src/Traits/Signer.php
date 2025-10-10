@@ -4,227 +4,374 @@ namespace DazzaDev\SriSigner\Traits;
 
 use DOMDocument;
 use DOMElement;
-use RobRichards\XMLSecLibs\XMLSecurityDSig;
-use RobRichards\XMLSecLibs\XMLSecurityKey;
+use DateTime;
+use DateTimeZone;
 
 trait Signer
 {
-    public function sign(DOMDocument $xml): string
+    private array $randomNumbers = [];
+
+    /**
+     * Sign the XML document with XAdES-BES format
+     */
+    public function sign(DOMDocument $xml): DOMDocument
     {
-        $root = $xml->documentElement;
-        if (!$root->hasAttribute('id')) {
-            $root->setAttribute('id', 'comprobante');
-        }
+        // Generate the 8 random numbers required for XAdES structure
+        $this->generateRandomNumbers();
 
-        // --- 1. Inicialización de la Firma y Canonicalización ---
-        $objDSig = new XMLSecurityDSig();
+        // Create signature structure
+        $signatureElement = $this->createSignatureStructure($xml);
 
-        // CORRECCIÓN: Usar C14N (Canonicalización No Exclusiva) como en archivo válido SRI
-        $objDSig->setCanonicalMethod(XMLSecurityDSig::C14N);
+        // Append signature to the root element
+        $xml->documentElement->appendChild($signatureElement);
 
-        // --- 2. Crear IDs y Nombres Requeridos para XAdES ---
-        // Generate unique ID based on timestamp and random component
-        $uniqueId = uniqid('', true);
-        $signatureId = 'Signature-' . $uniqueId;
-        $keyInfoId = 'KeyInfoId-' . $signatureId;
-        $signedPropsId = 'SignedProperties-' . $signatureId;
-        $signedInfoId = 'Signature-SignedInfo-' . $uniqueId;
-
-        // Establecer el ID de la firma
-        $objDSig->sigNode->setAttribute('Id', $signatureId);
-
-        // CORRECCIÓN CRÍTICA: Agregar ID al ds:SignedInfo
-        $objDSig->sigNode->getElementsByTagName('SignedInfo')->item(0)->setAttribute('Id', $signedInfoId);
-
-        // --- 3. Generar el Bloque XAdES (ds:Object y etsi:QualifyingProperties) ---
-        // El bloque XAdES contiene las propiedades firmadas (hora, política, etc.).
-        $qualifyingProperties = $this->generateSignedProperties($xml, $signedPropsId, $signatureId, $uniqueId);
-
-        $objNode = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:Object');
-        // CORRECCIÓN: Evitar namespaces duplicados en el ds:Object
-        $objNode->appendChild($qualifyingProperties);
-
-        // --- 4. Agregar Referencias para la Firma ---
-
-        // Referencia a las propiedades firmadas (XAdES)
-        $signedPropertiesNode = $qualifyingProperties->getElementsByTagName('SignedProperties')->item(0);
-        $signedPropertiesID = $signedPropertiesNode->getAttribute('Id');
-        $signedPropertiesDigest = base64_encode(sha1($signedPropertiesNode->C14N(true, false), true));
-
-        $referenceNode = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:Reference');
-        $referenceNode->setAttribute('Type', 'http://uri.etsi.org/01903#SignedProperties');
-        $referenceNode->setAttribute('URI', '#' . $signedPropertiesID);
-
-        $digestMethodNode = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:DigestMethod');
-        $digestMethodNode->setAttribute('Algorithm', XMLSecurityDSig::SHA1);
-
-        $digestValueNode = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:DigestValue', $signedPropertiesDigest);
-
-        $referenceNode->appendChild($digestMethodNode);
-        $referenceNode->appendChild($digestValueNode);
-
-        $signedInfoNode = $objDSig->sigNode->getElementsByTagName('SignedInfo')->item(0);
-        $importedReferenceNode = $signedInfoNode->ownerDocument->importNode($referenceNode, true);
-        $signedInfoNode->appendChild($importedReferenceNode);
-
-        //
-        $keyInfoNode = $objDSig->sigNode->getElementsByTagName('KeyInfo')->item(0);
-        if (!$keyInfoNode) {
-            // Crear un KeyInfo temporal para la referencia
-            $keyInfoNode = $xml->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:KeyInfo');
-            $keyInfoNode->setAttribute('Id', $keyInfoId);
-        }
-
-        // FIX: Ensure ds:Transforms contains a valid ds:Transform (use C14N) to satisfy SRI schema
-        $objDSig->addReference(
-            $keyInfoNode,
-            XMLSecurityDSig::SHA1,
-            null,
-            ['overwrite' => false]
-        );
-
-        // Referencia al documento principal (comprobante)
-        $objDSig->addReference(
-            $root,
-            XMLSecurityDSig::SHA1,
-            ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
-            ['id_name' => 'id', 'overwrite' => false]
-        );
-
-        // Ahora crear la clave y firmar
-        $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, ['type' => 'private']);
-        $objKey->loadKey($this->getPrivateKey(), false);
-
-        // Firmar el documento
-        $objDSig->sign($objKey);
-
-        // Añadir la información del certificado (X509Data) con cadena completa
-        $objDSig->add509Cert($this->getPublicCert(), true, false, ['issuerSerial' => true]);
-
-        // Agregar certificados intermedios si están disponibles en el certificado
-        if (isset($this->certificateData['extracerts']) && is_array($this->certificateData['extracerts'])) {
-            foreach ($this->certificateData['extracerts'] as $extraCert) {
-                $objDSig->add509Cert($extraCert, false, false);
-            }
-        }
-
-        // Establecer el ID del KeyInfo después de que se cree
-        $keyInfoNode = $objDSig->sigNode->getElementsByTagName('KeyInfo')->item(0);
-        if ($keyInfoNode) {
-            $keyInfoNode->setAttribute('Id', $keyInfoId);
-        }
-
-        // --- CORRECCIÓN: Agregar el ds:Object ANTES de appendSignature ---
-        // Importar el nodo ds:Object al documento de la firma antes de agregarlo
-        $importedObjNode = $objDSig->sigNode->ownerDocument->importNode($objNode, true);
-        $objDSig->sigNode->appendChild($importedObjNode);
-
-        // Adjuntar la firma completa al documento
-        $objDSig->appendSignature($root);
-
-        // Cleanup: Eliminar el 'Id' del nodo raíz si fue agregado temporalmente.
-        if ($root->hasAttribute('Id')) {
-            $root->removeAttribute('Id');
-        }
-
-        return $xml->saveXML();
+        return $xml;
     }
 
-
-    protected function generateSignedProperties(DOMDocument $xml, string $signedPropsId, string $signatureId, string $uniqueId): DOMElement
+    /**
+     * Generate the 8 random numbers required for XAdES structure
+     */
+    private function generateRandomNumbers(): void
     {
-        // Obtenga la información del certificado para el IssuerSerial
-        $cert = $this->getPublicCert();
-        $certData = openssl_x509_parse($cert);
+        $this->randomNumbers = [
+            'certificate' => rand(1, 100000),
+            'signature' => rand(1, 100000),
+            'signedProperties' => rand(1, 100000),
+            'signedInfo' => rand(1, 100000),
+            'signedPropertiesId' => rand(1, 100000),
+            'referenceId' => rand(1, 100000),
+            'signatureValue' => rand(1, 100000),
+            'object' => rand(1, 100000)
+        ];
+    }
 
-        // Extraer el IssuerName en el formato correcto para SRI Ecuador
-        // Formato requerido: CN=..., OU=..., O=..., C=...
-        $issuerParts = [];
-        if (isset($certData['issuer']['CN'])) {
-            $issuerParts[] = 'CN=' . $certData['issuer']['CN'];
+    /**
+     * Load and parse the P12 certificate
+     */
+    private function loadCertificate(): array
+    {
+        if (!file_exists($this->certificatePath)) {
+            throw new \Exception("Certificate file not found: {$this->certificatePath}");
         }
-        if (isset($certData['issuer']['OU'])) {
-            $issuerParts[] = 'OU=' . $certData['issuer']['OU'];
+
+        $p12Content = file_get_contents($this->certificatePath);
+        $certificates = [];
+
+        if (!openssl_pkcs12_read($p12Content, $certificates, $this->certificatePassword)) {
+            throw new \Exception("Failed to read P12 certificate");
         }
-        if (isset($certData['issuer']['O'])) {
-            $issuerParts[] = 'O=' . $certData['issuer']['O'];
-        }
-        if (isset($certData['issuer']['C'])) {
-            $issuerParts[] = 'C=' . $certData['issuer']['C'];
-        }
-        $issuerName = implode(',', $issuerParts);
-        $issuerSerial = (string) $certData['serialNumber'];
 
-        // Calcular el digest SHA1 del certificado DER (binario)
-        $certBinary = base64_decode(preg_replace('/-----[^-]+-----/', '', $cert));
-        $certDigestValue = base64_encode(sha1($certBinary, true));
+        return $certificates;
+    }
 
-        // Namespaces XAdES
-        $etsiNS = 'http://uri.etsi.org/01903/v1.3.2#';
-        $dsNS = XMLSecurityDSig::XMLDSIGNS;
+    /**
+     * Create the complete signature structure
+     */
+    private function createSignatureStructure(DOMDocument $xml): DOMElement
+    {
+        $signature = $xml->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Signature');
+        $signature->setAttribute('Id', 'Signature' . $this->randomNumbers['signature']);
+        $signature->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
+        $signature->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:etsi', 'http://uri.etsi.org/01903/v1.3.2#');
 
-        // --- etsi:QualifyingProperties ---
-        $qualifyingProperties = $xml->createElementNS($etsiNS, 'etsi:QualifyingProperties');
-        $qualifyingProperties->setAttribute('Target', '#' . $signatureId);
+        // Create SignedInfo
+        $signedInfo = $this->createSignedInfo($xml);
+        $signature->appendChild($signedInfo);
 
-        // --- etsi:SignedProperties ---
-        $signedProperties = $xml->createElementNS($etsiNS, 'etsi:SignedProperties');
-        $signedProperties->setAttribute('Id', $signedPropsId);
+        // Create KeyInfo
+        $keyInfo = $this->createKeyInfo($xml);
+        $signature->appendChild($keyInfo);
 
-        // --- etsi:SignedSignatureProperties ---
-        $signedSignatureProperties = $xml->createElementNS($etsiNS, 'etsi:SignedSignatureProperties');
+        // Create Object with XAdES properties
+        $object = $this->createObject($xml);
+        $signature->appendChild($object);
 
-        // etsi:SigningTime
-        $signingTime = $xml->createElementNS($etsiNS, 'etsi:SigningTime', gmdate('Y-m-d\TH:i:s.000\Z'));
+        // Calculate hashes for references
+        $this->calculateReferenceHashes($xml, $signedInfo, $keyInfo, $object);
 
-        // etsi:SigningCertificate
-        $signingCertificate = $xml->createElementNS($etsiNS, 'etsi:SigningCertificate');
-        $certNode = $xml->createElementNS($etsiNS, 'etsi:Cert');
+        // Create SignatureValue
+        $signatureValue = $this->createSignatureValue($xml, $signedInfo);
+        $signature->insertBefore($signatureValue, $keyInfo);
 
-        // ds:CertDigest (El DigestValue del certificado público)
-        $certDigest = $xml->createElementNS($etsiNS, 'etsi:CertDigest');
-        $digestMethod = $xml->createElementNS($dsNS, 'ds:DigestMethod');
-        $digestMethod->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
-        $digestValue = $xml->createElementNS($dsNS, 'ds:DigestValue', $certDigestValue);
-        $certDigest->appendChild($digestMethod);
-        $certDigest->appendChild($digestValue);
+        return $signature;
+    }
 
-        // ds:IssuerSerial
-        $issuerSerialNode = $xml->createElementNS($etsiNS, 'etsi:IssuerSerial');
-        $x509IssuerName = $xml->createElementNS($dsNS, 'ds:X509IssuerName', $issuerName);
-        $x509SerialNumber = $xml->createElementNS($dsNS, 'ds:X509SerialNumber', $issuerSerial);
-        $issuerSerialNode->appendChild($x509IssuerName);
-        $issuerSerialNode->appendChild($x509SerialNumber);
+    /**
+     * Create the SignedInfo element
+     */
+    private function createSignedInfo(DOMDocument $xml): DOMElement
+    {
+        $signedInfo = $xml->createElement('ds:SignedInfo');
+        $signedInfo->setAttribute('Id', 'Signature-SignedInfo' . $this->randomNumbers['signedInfo']);
 
-        $certNode->appendChild($certDigest);
-        $certNode->appendChild($issuerSerialNode);
-        $signingCertificate->appendChild($certNode);
+        // CanonicalizationMethod
+        $canonicalizationMethod = $xml->createElement('ds:CanonicalizationMethod');
+        $canonicalizationMethod->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
+        $signedInfo->appendChild($canonicalizationMethod);
 
-        // etsi:SignaturePolicyIdentifier (Asumimos el Implied, como el XML válido)
-        $policyIdentifier = $xml->createElementNS($etsiNS, 'etsi:SignaturePolicyIdentifier');
-        $policyImplied = $xml->createElementNS($etsiNS, 'etsi:SignaturePolicyImplied');
-        $policyIdentifier->appendChild($policyImplied);
+        // SignatureMethod
+        $signatureMethod = $xml->createElement('ds:SignatureMethod');
+        $signatureMethod->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#rsa-sha1');
+        $signedInfo->appendChild($signatureMethod);
 
+        // Reference to SignedProperties
+        $reference1 = $xml->createElement('ds:Reference');
+        $reference1->setAttribute('Id', 'SignedPropertiesID' . $this->randomNumbers['signedPropertiesId']);
+        $reference1->setAttribute('Type', 'http://uri.etsi.org/01903#SignedProperties');
+        $reference1->setAttribute('URI', '#Signature' . $this->randomNumbers['signature'] . '-SignedProperties' . $this->randomNumbers['signedProperties']);
+
+        $transforms1 = $xml->createElement('ds:Transforms');
+        $transform1 = $xml->createElement('ds:Transform');
+        $transform1->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
+        $transforms1->appendChild($transform1);
+        $reference1->appendChild($transforms1);
+
+        $digestMethod1 = $xml->createElement('ds:DigestMethod');
+        $digestMethod1->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+        $reference1->appendChild($digestMethod1);
+
+        $digestValue1 = $xml->createElement('ds:DigestValue');
+        $reference1->appendChild($digestValue1);
+
+        $signedInfo->appendChild($reference1);
+
+        // Reference to KeyInfo
+        $reference2 = $xml->createElement('ds:Reference');
+        $reference2->setAttribute('URI', '#Certificate' . $this->randomNumbers['certificate']);
+
+        $transforms2 = $xml->createElement('ds:Transforms');
+        $transform2 = $xml->createElement('ds:Transform');
+        $transform2->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
+        $transforms2->appendChild($transform2);
+        $reference2->appendChild($transforms2);
+
+        $digestMethod2 = $xml->createElement('ds:DigestMethod');
+        $digestMethod2->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+        $reference2->appendChild($digestMethod2);
+
+        $digestValue2 = $xml->createElement('ds:DigestValue');
+        $reference2->appendChild($digestValue2);
+
+        $signedInfo->appendChild($reference2);
+
+        // Reference to comprobante (root element)
+        $reference3 = $xml->createElement('ds:Reference');
+        $reference3->setAttribute('Id', 'Reference-ID-' . $this->randomNumbers['referenceId']);
+        $reference3->setAttribute('URI', '');
+
+        $transforms3 = $xml->createElement('ds:Transforms');
+        $transform3 = $xml->createElement('ds:Transform');
+        $transform3->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#enveloped-signature');
+        $transforms3->appendChild($transform3);
+        $reference3->appendChild($transforms3);
+
+        $digestMethod3 = $xml->createElement('ds:DigestMethod');
+        $digestMethod3->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+        $reference3->appendChild($digestMethod3);
+
+        $digestValue3 = $xml->createElement('ds:DigestValue');
+        $reference3->appendChild($digestValue3);
+
+        $signedInfo->appendChild($reference3);
+
+        return $signedInfo;
+    }
+
+    /**
+     * Create the KeyInfo element
+     */
+    private function createKeyInfo(DOMDocument $xml, array $certificate): DOMElement
+    {
+        $keyInfo = $xml->createElement('ds:KeyInfo');
+        $keyInfo->setAttribute('Id', 'Certificate' . $this->randomNumbers['certificate']);
+
+        // X509Data
+        $x509Data = $xml->createElement('ds:X509Data');
+        $x509Certificate = $xml->createElement('ds:X509Certificate');
+
+        // Extract certificate in PEM format without headers and format to 76 chars per line
+        $certData = $certificate['cert'];
+        $certPem = str_replace(['-----BEGIN CERTIFICATE-----', '-----END CERTIFICATE-----', "\n", "\r"], '', $certData);
+        $certFormatted = chunk_split($certPem, 76, "\n");
+        $certFormatted = trim($certFormatted);
+
+        $x509Certificate->nodeValue = $certFormatted;
+        $x509Data->appendChild($x509Certificate);
+        $keyInfo->appendChild($x509Data);
+
+        // KeyValue
+        $keyValue = $xml->createElement('ds:KeyValue');
+        $rsaKeyValue = $xml->createElement('ds:RSAKeyValue');
+
+        // Extract public key details
+        $publicKey = openssl_pkey_get_public($certificate['cert']);
+        $keyDetails = openssl_pkey_get_details($publicKey);
+
+        $modulus = $xml->createElement('ds:Modulus');
+        $modulus->nodeValue = base64_encode($keyDetails['rsa']['n']);
+        $rsaKeyValue->appendChild($modulus);
+
+        $exponent = $xml->createElement('ds:Exponent');
+        $exponent->nodeValue = base64_encode($keyDetails['rsa']['e']);
+        $rsaKeyValue->appendChild($exponent);
+
+        $keyValue->appendChild($rsaKeyValue);
+        $keyInfo->appendChild($keyValue);
+
+        return $keyInfo;
+    }
+
+    /**
+     * Create the Object element with XAdES properties
+     */
+    private function createObject(DOMDocument $xml, array $certificate): DOMElement
+    {
+        $object = $xml->createElement('ds:Object');
+        $object->setAttribute('Id', 'Signature' . $this->randomNumbers['signature'] . '-Object' . $this->randomNumbers['object']);
+
+        $qualifyingProperties = $xml->createElement('etsi:QualifyingProperties');
+        $qualifyingProperties->setAttribute('Target', '#Signature' . $this->randomNumbers['signature']);
+
+        $signedProperties = $xml->createElement('etsi:SignedProperties');
+        $signedProperties->setAttribute('Id', 'Signature' . $this->randomNumbers['signature'] . '-SignedProperties' . $this->randomNumbers['signedProperties']);
+
+        // SignedSignatureProperties
+        $signedSignatureProperties = $xml->createElement('etsi:SignedSignatureProperties');
+
+        // SigningTime
+        $signingTime = $xml->createElement('etsi:SigningTime');
+        $now = new DateTime('now', new DateTimeZone('America/Guayaquil'));
+        $signingTime->nodeValue = $now->format('Y-m-d\TH:i:sP');
         $signedSignatureProperties->appendChild($signingTime);
+
+        // SigningCertificate
+        $signingCertificate = $xml->createElement('etsi:SigningCertificate');
+        $cert = $xml->createElement('etsi:Cert');
+
+        $certDigest = $xml->createElement('etsi:CertDigest');
+        $digestMethod = $xml->createElement('ds:DigestMethod');
+        $digestMethod->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+        $certDigest->appendChild($digestMethod);
+
+        $digestValue = $xml->createElement('ds:DigestValue');
+        // Calculate SHA1 hash of certificate in DER format
+        $certDer = openssl_x509_read($certificate['cert']);
+        openssl_x509_export($certDer, $certPem);
+        $certDerBinary = base64_decode(str_replace(['-----BEGIN CERTIFICATE-----', '-----END CERTIFICATE-----', "\n", "\r"], '', $certPem));
+        $digestValue->nodeValue = base64_encode(sha1($certDerBinary, true));
+        $certDigest->appendChild($digestValue);
+        $cert->appendChild($certDigest);
+
+        $issuerSerial = $xml->createElement('etsi:IssuerSerial');
+        $x509IssuerName = $xml->createElement('ds:X509IssuerName');
+        $x509IssuerName->nodeValue = 'CN=AC BANCO CENTRAL DEL ECUADOR,L=QUITO,OU=ENTIDAD DE CERTIFICACION DE INFORMACION-ECIBCE,O=BANCO CENTRAL DEL ECUADOR,C=EC';
+        $issuerSerial->appendChild($x509IssuerName);
+
+        $x509SerialNumber = $xml->createElement('ds:X509SerialNumber');
+        $certDetails = openssl_x509_parse($certificate['cert']);
+        $x509SerialNumber->nodeValue = $certDetails['serialNumber'];
+        $issuerSerial->appendChild($x509SerialNumber);
+
+        $cert->appendChild($issuerSerial);
+        $signingCertificate->appendChild($cert);
         $signedSignatureProperties->appendChild($signingCertificate);
-        $signedSignatureProperties->appendChild($policyIdentifier);
-
-        // --- etsi:SignedDataObjectProperties ---
-        $signedDataObjectProperties = $xml->createElementNS($etsiNS, 'etsi:SignedDataObjectProperties');
-        $dataObjectFormat = $xml->createElementNS($etsiNS, 'etsi:DataObjectFormat');
-        $dataObjectFormat->setAttribute('ObjectReference', '#comprobante'); // Referencia correcta al documento
-
-        $description = $xml->createElementNS($etsiNS, 'etsi:Description', 'contenido comprobante');
-        $mimeType = $xml->createElementNS($etsiNS, 'etsi:MimeType', 'text/xml');
-
-        $dataObjectFormat->appendChild($description);
-        $dataObjectFormat->appendChild($mimeType);
-        $signedDataObjectProperties->appendChild($dataObjectFormat);
 
         $signedProperties->appendChild($signedSignatureProperties);
-        $signedProperties->appendChild($signedDataObjectProperties);
-        $qualifyingProperties->appendChild($signedProperties);
 
-        return $qualifyingProperties;
+        // SignedDataObjectProperties
+        $signedDataObjectProperties = $xml->createElement('etsi:SignedDataObjectProperties');
+        $dataObjectFormat = $xml->createElement('etsi:DataObjectFormat');
+        $dataObjectFormat->setAttribute('ObjectReference', '#Reference-ID-' . $this->randomNumbers['referenceId']);
+
+        $description = $xml->createElement('etsi:Description');
+        $description->nodeValue = 'contenido comprobante';
+        $dataObjectFormat->appendChild($description);
+
+        $mimeType = $xml->createElement('etsi:MimeType');
+        $mimeType->nodeValue = 'text/xml';
+        $dataObjectFormat->appendChild($mimeType);
+
+        $signedDataObjectProperties->appendChild($dataObjectFormat);
+        $signedProperties->appendChild($signedDataObjectProperties);
+
+        $qualifyingProperties->appendChild($signedProperties);
+        $object->appendChild($qualifyingProperties);
+
+        return $object;
+    }
+
+    /**
+     * Calculate hashes for all references in SignedInfo
+     */
+    private function calculateReferenceHashes(DOMDocument $xml, DOMElement $signedInfo, DOMElement $keyInfo, DOMElement $object): void
+    {
+        $references = $signedInfo->getElementsByTagName('Reference');
+
+        foreach ($references as $reference) {
+            $uri = $reference->getAttribute('URI');
+            $digestValue = $reference->getElementsByTagName('DigestValue')->item(0);
+
+            if (strpos($uri, '#Signature') === 0 && strpos($uri, 'SignedProperties') !== false) {
+                // Hash of SignedProperties
+                $signedProperties = $object->getElementsByTagName('SignedProperties')->item(0);
+                $canonicalized = $this->canonicalizeElement($signedProperties);
+                $hash = base64_encode(sha1($canonicalized, true));
+                $digestValue->nodeValue = $hash;
+            } elseif (strpos($uri, '#Certificate') === 0) {
+                // Hash of KeyInfo
+                $canonicalized = $this->canonicalizeElement($keyInfo);
+                $hash = base64_encode(sha1($canonicalized, true));
+                $digestValue->nodeValue = $hash;
+            } elseif ($uri === '') {
+                // Hash of comprobante (root element without signature)
+                $rootClone = $xml->documentElement->cloneNode(true);
+                // Remove any existing signature elements
+                $signatures = $rootClone->getElementsByTagName('Signature');
+                while ($signatures->length > 0) {
+                    $signatures->item(0)->parentNode->removeChild($signatures->item(0));
+                }
+                $hash = base64_encode(sha1($rootClone->C14N(), true));
+                $digestValue->nodeValue = $hash;
+            }
+        }
+    }
+
+    /**
+     * Canonicalize an element with proper namespaces
+     */
+    private function canonicalizeElement(DOMElement $element): string
+    {
+        // Add required namespaces for canonicalization
+        $element->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
+        $element->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:etsi', 'http://uri.etsi.org/01903/v1.3.2#');
+
+        return $element->C14N();
+    }
+
+    /**
+     * Create the SignatureValue element
+     */
+    private function createSignatureValue(DOMDocument $xml, DOMElement $signedInfo): DOMElement
+    {
+        $signatureValue = $xml->createElement('ds:SignatureValue');
+        $signatureValue->setAttribute('Id', 'SignatureValue' . $this->randomNumbers['signatureValue']);
+
+        // Canonicalize SignedInfo
+        $canonicalized = $this->canonicalizeElement($signedInfo);
+
+        // Sign with private key
+        $privateKey = openssl_pkey_get_private($certificate['pkey']);
+        if (!$privateKey) {
+            throw new \Exception("Failed to load private key");
+        }
+
+        $signature = '';
+        if (!openssl_sign($canonicalized, $signature, $privateKey, OPENSSL_ALGO_SHA1)) {
+            throw new \Exception("Failed to create digital signature");
+        }
+
+        $signatureValue->nodeValue = base64_encode($signature);
+
+        return $signatureValue;
     }
 }

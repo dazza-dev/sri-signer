@@ -14,7 +14,7 @@ trait Signer
     /**
      * Sign the XML document with XAdES-BES format
      */
-    public function sign(DOMDocument $xml): DOMDocument
+    public function sign(DOMDocument $xml): string
     {
         // Generate the 8 random numbers required for XAdES structure
         $this->generateRandomNumbers();
@@ -25,7 +25,7 @@ trait Signer
         // Append signature to the root element
         $xml->documentElement->appendChild($signatureElement);
 
-        return $xml;
+        return $xml->saveXML();
     }
 
     /**
@@ -43,25 +43,6 @@ trait Signer
             'signatureValue' => rand(1, 100000),
             'object' => rand(1, 100000)
         ];
-    }
-
-    /**
-     * Load and parse the P12 certificate
-     */
-    private function loadCertificate(): array
-    {
-        if (!file_exists($this->certificatePath)) {
-            throw new \Exception("Certificate file not found: {$this->certificatePath}");
-        }
-
-        $p12Content = file_get_contents($this->certificatePath);
-        $certificates = [];
-
-        if (!openssl_pkcs12_read($p12Content, $certificates, $this->certificatePassword)) {
-            throw new \Exception("Failed to read P12 certificate");
-        }
-
-        return $certificates;
     }
 
     /**
@@ -180,7 +161,7 @@ trait Signer
     /**
      * Create the KeyInfo element
      */
-    private function createKeyInfo(DOMDocument $xml, array $certificate): DOMElement
+    private function createKeyInfo(DOMDocument $xml): DOMElement
     {
         $keyInfo = $xml->createElement('ds:KeyInfo');
         $keyInfo->setAttribute('Id', 'Certificate' . $this->randomNumbers['certificate']);
@@ -190,7 +171,7 @@ trait Signer
         $x509Certificate = $xml->createElement('ds:X509Certificate');
 
         // Extract certificate in PEM format without headers and format to 76 chars per line
-        $certData = $certificate['cert'];
+        $certData = $this->getPublicCert();
         $certPem = str_replace(['-----BEGIN CERTIFICATE-----', '-----END CERTIFICATE-----', "\n", "\r"], '', $certData);
         $certFormatted = chunk_split($certPem, 76, "\n");
         $certFormatted = trim($certFormatted);
@@ -204,7 +185,7 @@ trait Signer
         $rsaKeyValue = $xml->createElement('ds:RSAKeyValue');
 
         // Extract public key details
-        $publicKey = openssl_pkey_get_public($certificate['cert']);
+        $publicKey = openssl_pkey_get_public($this->getPublicCert());
         $keyDetails = openssl_pkey_get_details($publicKey);
 
         $modulus = $xml->createElement('ds:Modulus');
@@ -224,7 +205,7 @@ trait Signer
     /**
      * Create the Object element with XAdES properties
      */
-    private function createObject(DOMDocument $xml, array $certificate): DOMElement
+    private function createObject(DOMDocument $xml): DOMElement
     {
         $object = $xml->createElement('ds:Object');
         $object->setAttribute('Id', 'Signature' . $this->randomNumbers['signature'] . '-Object' . $this->randomNumbers['object']);
@@ -255,7 +236,7 @@ trait Signer
 
         $digestValue = $xml->createElement('ds:DigestValue');
         // Calculate SHA1 hash of certificate in DER format
-        $certDer = openssl_x509_read($certificate['cert']);
+        $certDer = openssl_x509_read($this->getPublicCert());
         openssl_x509_export($certDer, $certPem);
         $certDerBinary = base64_decode(str_replace(['-----BEGIN CERTIFICATE-----', '-----END CERTIFICATE-----', "\n", "\r"], '', $certPem));
         $digestValue->nodeValue = base64_encode(sha1($certDerBinary, true));
@@ -268,7 +249,7 @@ trait Signer
         $issuerSerial->appendChild($x509IssuerName);
 
         $x509SerialNumber = $xml->createElement('ds:X509SerialNumber');
-        $certDetails = openssl_x509_parse($certificate['cert']);
+        $certDetails = openssl_x509_parse($this->getPublicCert());
         $x509SerialNumber->nodeValue = $certDetails['serialNumber'];
         $issuerSerial->appendChild($x509SerialNumber);
 
@@ -360,7 +341,7 @@ trait Signer
         $canonicalized = $this->canonicalizeElement($signedInfo);
 
         // Sign with private key
-        $privateKey = openssl_pkey_get_private($certificate['pkey']);
+        $privateKey = openssl_pkey_get_private($this->getPrivateKey());
         if (!$privateKey) {
             throw new \Exception("Failed to load private key");
         }

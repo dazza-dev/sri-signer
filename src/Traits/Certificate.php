@@ -114,6 +114,18 @@ trait Certificate
     }
 
     /**
+     * Get X509 certificate formatted with line breaks every 76 characters for XML output
+     * According to SRI documentation and RFC 2045 MIME standard
+     */
+    public function getFormattedX509Certificate(): string
+    {
+        $cleanCert = $this->getCleanX509Certificate();
+        
+        // Insert line breaks every 76 characters as per SRI documentation
+        return preg_replace('/.{76}/', '$0' . "\n", $cleanCert);
+    }
+
+    /**
      * Format issuer name according to SRI requirements
      */
     public function formatIssuerName(array $issuer): string

@@ -107,12 +107,6 @@ trait Signer
         $reference1->setAttribute('Type', 'http://uri.etsi.org/01903#SignedProperties');
         $reference1->setAttribute('URI', '#Signature' . $this->randomNumbers['signature'] . '-SignedProperties' . $this->randomNumbers['signedProperties']);
 
-        $transforms1 = $xml->createElement('ds:Transforms');
-        $transform1 = $xml->createElement('ds:Transform');
-        $transform1->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
-        $transforms1->appendChild($transform1);
-        $reference1->appendChild($transforms1);
-
         $digestMethod1 = $xml->createElement('ds:DigestMethod');
         $digestMethod1->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
         $reference1->appendChild($digestMethod1);
@@ -120,17 +114,12 @@ trait Signer
         $digestValue1 = $xml->createElement('ds:DigestValue');
         $reference1->appendChild($digestValue1);
 
+        // Add Reference1 to SignedInfo
         $signedInfo->appendChild($reference1);
 
         // Reference to KeyInfo
         $reference2 = $xml->createElement('ds:Reference');
         $reference2->setAttribute('URI', '#Certificate' . $this->randomNumbers['certificate']);
-
-        $transforms2 = $xml->createElement('ds:Transforms');
-        $transform2 = $xml->createElement('ds:Transform');
-        $transform2->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
-        $transforms2->appendChild($transform2);
-        $reference2->appendChild($transforms2);
 
         $digestMethod2 = $xml->createElement('ds:DigestMethod');
         $digestMethod2->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
@@ -139,6 +128,7 @@ trait Signer
         $digestValue2 = $xml->createElement('ds:DigestValue');
         $reference2->appendChild($digestValue2);
 
+        // Add Reference2 to SignedInfo
         $signedInfo->appendChild($reference2);
 
         // Reference to comprobante (root element)
@@ -159,6 +149,7 @@ trait Signer
         $digestValue3 = $xml->createElement('ds:DigestValue');
         $reference3->appendChild($digestValue3);
 
+        // Add Reference3 to SignedInfo
         $signedInfo->appendChild($reference3);
 
         return $signedInfo;

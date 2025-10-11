@@ -43,6 +43,9 @@ trait Document
         file_put_contents(__DIR__ . '/signed.xml', $this->signedDocument);
         echo 'Archivo signed.xml guardado exitosamente!' . PHP_EOL;
 
+        //$xml = file_get_contents(__DIR__ . '/signed_invoice.xml');
+        //$validate = $this->validate($xml);
+
         // Send document
         $validate = $this->validate($this->signedDocument);
 
@@ -53,12 +56,16 @@ trait Document
         sleep(3);
 
         $authorize = $this->authorize($this->getAccessKey());
+        //$authorize = $this->authorize('0310202501019512705000110010010000000089848337715');
+
+        echo '<pre>';
+        print_r($authorize);
+        echo '</pre>';
 
         if (!$authorize['success']) {
             throw new DocumentException($authorize['status'] . ' - ' . $authorize['error']);
         }
 
-        print_r($authorize);
         echo 'Documento autorizado exitosamente!' . PHP_EOL;
 
         return $this->signedDocument;

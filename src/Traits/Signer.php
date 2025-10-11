@@ -144,6 +144,7 @@ trait Signer
         $reference1->appendChild($digestMethod1);
 
         $digestValue1 = $xml->createElement('ds:DigestValue');
+        $digestValue1->nodeValue = $this->hashSignedProperties;
         $reference1->appendChild($digestValue1);
 
         // Add Reference1 to SignedInfo
@@ -158,6 +159,7 @@ trait Signer
         $reference2->appendChild($digestMethod2);
 
         $digestValue2 = $xml->createElement('ds:DigestValue');
+        $digestValue2->nodeValue = $this->hashKeyInfo;
         $reference2->appendChild($digestValue2);
 
         // Add Reference2 to SignedInfo
@@ -179,6 +181,7 @@ trait Signer
         $reference3->appendChild($digestMethod3);
 
         $digestValue3 = $xml->createElement('ds:DigestValue');
+        $digestValue3->nodeValue = $this->hashComprobante;
         $reference3->appendChild($digestValue3);
 
         // Add Reference3 to SignedInfo

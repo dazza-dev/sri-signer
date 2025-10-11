@@ -281,6 +281,36 @@ trait Signer
     }
 
     /**
+     * Create the SignatureValue element
+     */
+    private function createSignatureValue(DOMDocument $xml, DOMElement $signedInfo): DOMElement
+    {
+        $signatureValue = $xml->createElement('ds:SignatureValue');
+        $signatureValue->setAttribute('Id', 'SignatureValue' . $this->randomNumbers['signatureValue']);
+
+        // Canonicalize SignedInfo
+        $canonicalized = $this->canonicalizeElement($signedInfo);
+
+        // Sign with private key
+        $privateKey = openssl_pkey_get_private($this->getPrivateKey());
+        if (!$privateKey) {
+            throw new Exception("Failed to load private key");
+        }
+
+        $signature = '';
+        if (!openssl_sign($canonicalized, $signature, $privateKey, OPENSSL_ALGO_SHA1)) {
+            throw new Exception("Failed to create digital signature");
+        }
+
+        // Format signature with 76-character line breaks (equivalent to JavaScript implementation)
+        $base64Signature = base64_encode($signature);
+        $formattedSignature = chunk_split($base64Signature, 76, "\n");
+        $signatureValue->nodeValue = trim($formattedSignature);
+
+        return $signatureValue;
+    }
+
+    /**
      * Calculate hashes for all references in SignedInfo
      */
     private function calculateReferenceHashes(DOMDocument $xml, DOMElement $signedInfo, DOMElement $keyInfo, DOMElement $object): void
@@ -336,56 +366,6 @@ trait Signer
     }
 
     /**
-     * Canonicalize an element with proper namespaces
-     */
-    private function canonicalizeElement(DOMElement $element)
-    {
-        // Create a new document to ensure proper namespace context
-        $tempDoc = new DOMDocument('1.0', 'UTF-8');
-
-        // Import the element into the new document with deep copy
-        $importedElement = $tempDoc->importNode($element, true);
-        $tempDoc->appendChild($importedElement);
-
-        // Ensure namespaces are properly declared on the root element
-        $importedElement->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
-        $importedElement->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:etsi', 'http://uri.etsi.org/01903/v1.3.2#');
-
-        // Use C14N on the imported element
-        return $importedElement->C14N();
-    }
-
-    /**
-     * Create the SignatureValue element
-     */
-    private function createSignatureValue(DOMDocument $xml, DOMElement $signedInfo): DOMElement
-    {
-        $signatureValue = $xml->createElement('ds:SignatureValue');
-        $signatureValue->setAttribute('Id', 'SignatureValue' . $this->randomNumbers['signatureValue']);
-
-        // Canonicalize SignedInfo
-        $canonicalized = $this->canonicalizeElement($signedInfo);
-
-        // Sign with private key
-        $privateKey = openssl_pkey_get_private($this->getPrivateKey());
-        if (!$privateKey) {
-            throw new Exception("Failed to load private key");
-        }
-
-        $signature = '';
-        if (!openssl_sign($canonicalized, $signature, $privateKey, OPENSSL_ALGO_SHA1)) {
-            throw new Exception("Failed to create digital signature");
-        }
-
-        // Format signature with 76-character line breaks (equivalent to JavaScript implementation)
-        $base64Signature = base64_encode($signature);
-        $formattedSignature = chunk_split($base64Signature, 76, "\n");
-        $signatureValue->nodeValue = trim($formattedSignature);
-
-        return $signatureValue;
-    }
-
-    /**
      * Remove indentation from signature elements while preserving original XML formatting
      */
     private function removeSignatureIndentation(string $xmlString): string
@@ -403,6 +383,26 @@ trait Signer
             // Return signature without indentation but preserve the original line break
             return "\n" . $signatureContent;
         }, $xmlString);
+    }
+
+    /**
+     * Canonicalize an element with proper namespaces
+     */
+    private function canonicalizeElement(DOMElement $element)
+    {
+        // Create a new document to ensure proper namespace context
+        $tempDoc = new DOMDocument('1.0', 'UTF-8');
+
+        // Import the element into the new document with deep copy
+        $importedElement = $tempDoc->importNode($element, true);
+        $tempDoc->appendChild($importedElement);
+
+        // Ensure namespaces are properly declared on the root element
+        $importedElement->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
+        $importedElement->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:etsi', 'http://uri.etsi.org/01903/v1.3.2#');
+
+        // Use C14N on the imported element
+        return $importedElement->C14N();
     }
 
     /**

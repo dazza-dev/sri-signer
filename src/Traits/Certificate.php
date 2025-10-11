@@ -130,26 +130,18 @@ trait Certificate
      */
     public function formatIssuerName(array $issuer): string
     {
-        $parts = [];
-
-        // Order according to SRI format: CN, L, OU, O, C
-        if (isset($issuer['CN'])) {
-            $parts[] = 'CN=' . $issuer['CN'];
-        }
-        if (isset($issuer['L'])) {
-            $parts[] = 'L=' . $issuer['L'];
-        }
-        if (isset($issuer['OU'])) {
-            $parts[] = 'OU=' . $issuer['OU'];
-        }
-        if (isset($issuer['O'])) {
-            $parts[] = 'O=' . $issuer['O'];
-        }
-        if (isset($issuer['C'])) {
-            $parts[] = 'C=' . $issuer['C'];
+        // Convert issuer array to key-value pairs and reverse order (like JavaScript implementation)
+        $issuerAttrs = [];
+        foreach ($issuer as $shortName => $value) {
+            $issuerAttrs[] = ['shortName' => $shortName, 'value' => $value];
         }
 
-        return implode(',', $parts);
+        // Reverse the array and map to "shortName=value" format
+        $issuerName = array_map(function ($attr) {
+            return $attr['shortName'] . '=' . $attr['value'];
+        }, array_reverse($issuerAttrs));
+
+        return implode(', ', $issuerName);
     }
 
     /**

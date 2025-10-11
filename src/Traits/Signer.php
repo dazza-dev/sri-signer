@@ -331,32 +331,7 @@ trait Signer
                 $hash = $this->sha1Base64($canonicalized);
                 $digestValue->nodeValue = $hash;
             } elseif ($uri === '#comprobante') {
-                // Hash of comprobante (root element without signature)
-                $rootClone = $xml->documentElement->cloneNode(true);
-
-                // Create a new document and import the cloned element
-                $tempDoc = new DOMDocument('1.0', 'UTF-8');
-                $importedRoot = $tempDoc->importNode($rootClone, true);
-                $tempDoc->appendChild($importedRoot);
-
-                // Remove any existing signature elements from the imported element
-                $signatures = $importedRoot->getElementsByTagName('Signature');
-                $removedCount = 0;
-                while ($signatures->length > 0) {
-                    $signatures->item(0)->parentNode->removeChild($signatures->item(0));
-                    $removedCount++;
-                }
-
-                // Also check for ds:Signature elements
-                $dsSignatures = $importedRoot->getElementsByTagNameNS('http://www.w3.org/2000/09/xmldsig#', 'Signature');
-                while ($dsSignatures->length > 0) {
-                    $dsSignatures->item(0)->parentNode->removeChild($dsSignatures->item(0));
-                    $removedCount++;
-                }
-
-                $canonicalized = $importedRoot->C14N();
-                $hash = $this->sha1Base64($canonicalized);
-                $digestValue->nodeValue = $hash;
+                $digestValue->nodeValue = $this->hashComprobante;
             }
         }
     }

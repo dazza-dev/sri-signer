@@ -82,13 +82,13 @@ trait Signer
     private function createObject(DOMDocument $xml): DOMElement
     {
         $object = $xml->createElement('ds:Object');
-        $object->setAttribute('Id', 'Signature-' . $this->randomNumbers['signature'] . '-Object' . $this->randomNumbers['object']);
+        $object->setAttribute('Id', 'SignatureObject-' . $this->randomNumbers['object']);
 
         $qualifyingProperties = $xml->createElement('xades:QualifyingProperties');
         $qualifyingProperties->setAttribute('Target', '#Signature-' . $this->randomNumbers['signature']);
 
         $signedProperties = $xml->createElement('xades:SignedProperties');
-        $signedProperties->setAttribute('Id', 'Signature-' . $this->randomNumbers['signature'] . '-SignedProperties' . $this->randomNumbers['signedProperties']);
+        $signedProperties->setAttribute('Id', 'SignedProperties-' . $this->randomNumbers['signedProperties']);
 
         // SignedSignatureProperties
         $signedSignatureProperties = $xml->createElement('xades:SignedSignatureProperties');
@@ -170,7 +170,7 @@ trait Signer
     private function createKeyInfo(DOMDocument $xml): DOMElement
     {
         $keyInfo = $xml->createElement('ds:KeyInfo');
-        $keyInfo->setAttribute('Id', 'Certificate' . $this->randomNumbers['certificate']);
+        $keyInfo->setAttribute('Id', 'Certificate-' . $this->randomNumbers['certificate']);
 
         // X509Data
         $x509Data = $xml->createElement('ds:X509Data');
@@ -249,9 +249,9 @@ trait Signer
 
         // Reference to SignedProperties
         $reference1 = $xml->createElement('ds:Reference');
-        $reference1->setAttribute('Id', 'SignedPropertiesID' . $this->randomNumbers['signedPropertiesId']);
+        $reference1->setAttribute('Id', 'SignedPropertiesRef-' . $this->randomNumbers['signedPropertiesId']);
         $reference1->setAttribute('Type', 'http://uri.etsi.org/01903#SignedProperties');
-        $reference1->setAttribute('URI', '#Signature-' . $this->randomNumbers['signature'] . '-SignedProperties' . $this->randomNumbers['signedProperties']);
+        $reference1->setAttribute('URI', '#SignedProperties-' . $this->randomNumbers['signedProperties']);
 
         $digestMethod1 = $xml->createElement('ds:DigestMethod');
         $digestMethod1->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
@@ -266,7 +266,8 @@ trait Signer
 
         // Reference to KeyInfo
         $reference2 = $xml->createElement('ds:Reference');
-        $reference2->setAttribute('URI', '#Certificate' . $this->randomNumbers['certificate']);
+        $reference2->setAttribute('Id', 'CertificateRef-' . $this->randomNumbers['certificateId']);
+        $reference2->setAttribute('URI', '#Certificate-' . $this->randomNumbers['certificate']);
 
         $digestMethod2 = $xml->createElement('ds:DigestMethod');
         $digestMethod2->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
@@ -288,7 +289,7 @@ trait Signer
     private function createSignatureValue(DOMDocument $xml, DOMElement $signedInfo): DOMElement
     {
         $signatureValue = $xml->createElement('ds:SignatureValue');
-        $signatureValue->setAttribute('Id', 'SignatureValue' . $this->randomNumbers['signatureValue']);
+        $signatureValue->setAttribute('Id', 'SignatureValue-' . $this->randomNumbers['signatureValue']);
 
         // Canonicalize SignedInfo
         $canonicalized = $this->canonicalizeElement($signedInfo);
@@ -400,6 +401,7 @@ trait Signer
     {
         $this->randomNumbers = [
             'certificate' => rand(1, 100000),
+            'certificateId' => rand(1, 100000),
             'signature' => rand(1, 100000),
             'signedProperties' => rand(1, 100000),
             'signedInfo' => rand(1, 100000),

@@ -47,43 +47,6 @@ trait Signer
     }
 
     /**
-     * Remove indentation from signature elements while preserving original XML formatting
-     */
-    private function removeSignatureIndentation(string $xmlString): string
-    {
-        // Pattern to match signature elements with indentation
-        $pattern = '/(\s+)(<ds:Signature[^>]*>.*?<\/ds:Signature>)/s';
-
-        return preg_replace_callback($pattern, function ($matches) {
-            $indentation = $matches[1];
-            $signatureContent = $matches[2];
-
-            // Remove all indentation from signature content
-            $signatureContent = preg_replace('/\n\s+/', '', $signatureContent);
-
-            // Return signature without indentation but preserve the original line break
-            return "\n" . $signatureContent;
-        }, $xmlString);
-    }
-
-    /**
-     * Generate the 8 random numbers required for XAdES structure
-     */
-    private function generateRandomNumbers(): void
-    {
-        $this->randomNumbers = [
-            'certificate' => rand(1, 100000),
-            'signature' => rand(1, 100000),
-            'signedProperties' => rand(1, 100000),
-            'signedInfo' => rand(1, 100000),
-            'signedPropertiesId' => rand(1, 100000),
-            'referenceId' => rand(1, 100000),
-            'signatureValue' => rand(1, 100000),
-            'object' => rand(1, 100000)
-        ];
-    }
-
-    /**
      * Create the complete signature structure
      */
     private function createSignatureStructure(DOMDocument $xml): DOMElement
@@ -423,10 +386,47 @@ trait Signer
     }
 
     /**
+     * Remove indentation from signature elements while preserving original XML formatting
+     */
+    private function removeSignatureIndentation(string $xmlString): string
+    {
+        // Pattern to match signature elements with indentation
+        $pattern = '/(\s+)(<ds:Signature[^>]*>.*?<\/ds:Signature>)/s';
+
+        return preg_replace_callback($pattern, function ($matches) {
+            $indentation = $matches[1];
+            $signatureContent = $matches[2];
+
+            // Remove all indentation from signature content
+            $signatureContent = preg_replace('/\n\s+/', '', $signatureContent);
+
+            // Return signature without indentation but preserve the original line break
+            return "\n" . $signatureContent;
+        }, $xmlString);
+    }
+
+    /**
      * Calculate SHA1 hash and encode to base64
      */
     private function sha1Base64(string $text): string
     {
         return base64_encode(sha1($text, true));
+    }
+
+    /**
+     * Generate the 8 random numbers required for XAdES structure
+     */
+    private function generateRandomNumbers(): void
+    {
+        $this->randomNumbers = [
+            'certificate' => rand(1, 100000),
+            'signature' => rand(1, 100000),
+            'signedProperties' => rand(1, 100000),
+            'signedInfo' => rand(1, 100000),
+            'signedPropertiesId' => rand(1, 100000),
+            'referenceId' => rand(1, 100000),
+            'signatureValue' => rand(1, 100000),
+            'object' => rand(1, 100000)
+        ];
     }
 }

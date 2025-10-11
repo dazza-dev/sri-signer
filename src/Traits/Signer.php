@@ -52,7 +52,7 @@ trait Signer
     private function createSignatureStructure(DOMDocument $xml): DOMElement
     {
         $signature = $xml->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Signature');
-        $signature->setAttribute('Id', 'Signature' . $this->randomNumbers['signature']);
+        $signature->setAttribute('Id', 'Signature-' . $this->randomNumbers['signature']);
         $signature->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
 
         // Create Object with XAdES properties
@@ -82,13 +82,13 @@ trait Signer
     private function createObject(DOMDocument $xml): DOMElement
     {
         $object = $xml->createElement('ds:Object');
-        $object->setAttribute('Id', 'Signature' . $this->randomNumbers['signature'] . '-Object' . $this->randomNumbers['object']);
+        $object->setAttribute('Id', 'Signature-' . $this->randomNumbers['signature'] . '-Object' . $this->randomNumbers['object']);
 
         $qualifyingProperties = $xml->createElement('xades:QualifyingProperties');
-        $qualifyingProperties->setAttribute('Target', '#Signature' . $this->randomNumbers['signature']);
+        $qualifyingProperties->setAttribute('Target', '#Signature-' . $this->randomNumbers['signature']);
 
         $signedProperties = $xml->createElement('xades:SignedProperties');
-        $signedProperties->setAttribute('Id', 'Signature' . $this->randomNumbers['signature'] . '-SignedProperties' . $this->randomNumbers['signedProperties']);
+        $signedProperties->setAttribute('Id', 'Signature-' . $this->randomNumbers['signature'] . '-SignedProperties' . $this->randomNumbers['signedProperties']);
 
         // SignedSignatureProperties
         $signedSignatureProperties = $xml->createElement('xades:SignedSignatureProperties');
@@ -137,10 +137,10 @@ trait Signer
         // SignedDataObjectProperties
         $signedDataObjectProperties = $xml->createElement('xades:SignedDataObjectProperties');
         $dataObjectFormat = $xml->createElement('xades:DataObjectFormat');
-        $dataObjectFormat->setAttribute('ObjectReference', '#Reference-ID-' . $this->randomNumbers['referenceId']);
+        $dataObjectFormat->setAttribute('ObjectReference', '#DocumentRef-' . $this->randomNumbers['referenceId']);
 
         $description = $xml->createElement('xades:Description');
-        $description->nodeValue = 'contenido comprobante';
+        $description->nodeValue = 'Firma digital';
         $dataObjectFormat->appendChild($description);
 
         $mimeType = $xml->createElement('xades:MimeType');
@@ -209,7 +209,7 @@ trait Signer
     private function createSignedInfo(DOMDocument $xml): DOMElement
     {
         $signedInfo = $xml->createElement('ds:SignedInfo');
-        $signedInfo->setAttribute('Id', 'Signature-SignedInfo' . $this->randomNumbers['signedInfo']);
+        $signedInfo->setAttribute('Id', 'SignedInfo-' . $this->randomNumbers['signedInfo']);
 
         // CanonicalizationMethod
         $canonicalizationMethod = $xml->createElement('ds:CanonicalizationMethod');
@@ -223,7 +223,7 @@ trait Signer
 
         // Reference to comprobante (root element)
         $reference3 = $xml->createElement('ds:Reference');
-        $reference3->setAttribute('Id', 'Reference-ID-' . $this->randomNumbers['referenceId']);
+        $reference3->setAttribute('Id', 'DocumentRef-' . $this->randomNumbers['referenceId']);
         $reference3->setAttribute('URI', '#comprobante');
 
         $transforms3 = $xml->createElement('ds:Transforms');
@@ -247,7 +247,7 @@ trait Signer
         $reference1 = $xml->createElement('ds:Reference');
         $reference1->setAttribute('Id', 'SignedPropertiesID' . $this->randomNumbers['signedPropertiesId']);
         $reference1->setAttribute('Type', 'http://uri.etsi.org/01903#SignedProperties');
-        $reference1->setAttribute('URI', '#Signature' . $this->randomNumbers['signature'] . '-SignedProperties' . $this->randomNumbers['signedProperties']);
+        $reference1->setAttribute('URI', '#Signature-' . $this->randomNumbers['signature'] . '-SignedProperties' . $this->randomNumbers['signedProperties']);
 
         $digestMethod1 = $xml->createElement('ds:DigestMethod');
         $digestMethod1->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');

@@ -16,6 +16,8 @@ trait Signer
 
     private string $hashSignedProperties = '';
 
+    private string $hashKeyInfo = '';
+
     /**
      * Sign the XML document with XAdES-BES format
      */
@@ -95,13 +97,13 @@ trait Signer
         $object = $this->createObject($xml);
         $signature->appendChild($object);
 
-        // Create SignedInfo
-        $signedInfo = $this->createSignedInfo($xml);
-        $signature->appendChild($signedInfo);
-
         // Create KeyInfo
         $keyInfo = $this->createKeyInfo($xml);
         $signature->appendChild($keyInfo);
+
+        // Create SignedInfo
+        $signedInfo = $this->createSignedInfo($xml);
+        $signature->appendChild($signedInfo);
 
         // Create SignatureValue
         $signatureValue = $this->createSignatureValue($xml, $signedInfo);
@@ -198,7 +200,7 @@ trait Signer
         $x509Certificate = $xml->createElement('ds:X509Certificate');
 
         // Get formatted certificate data with line breaks every 76 characters
-        $x509Certificate->nodeValue = $this->getCleanX509Certificate();
+        $x509Certificate->nodeValue = $this->getFormattedX509Certificate();
         $x509Data->appendChild($x509Certificate);
         $keyInfo->appendChild($x509Data);
 
@@ -220,6 +222,10 @@ trait Signer
 
         $keyValue->appendChild($rsaKeyValue);
         $keyInfo->appendChild($keyValue);
+
+        // Calculate hash of KeyInfo
+        $canonicalizedKeyInfo = $this->canonicalizeElement($keyInfo);
+        $this->hashKeyInfo = $this->sha1Base64($canonicalizedKeyInfo);
 
         return $keyInfo;
     }

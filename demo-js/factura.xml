@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<factura id="comprobante" version="2.1.0">
+  <infoTributaria>
+    <ambiente>1</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>AURANET S.A.S.</razonSocial>
+    <nombreComercial>AURANET S.A.S.</nombreComercial>
+    <ruc>0195127050001</ruc>
+    <claveAcceso>0310202501019512705000110010010000000089848337715</claveAcceso>
+    <codDoc>01</codDoc>
+    <estab>001</estab>
+    <ptoEmi>001</ptoEmi>
+    <secuencial>000000008</secuencial>
+    <dirMatriz>Company Address</dirMatriz>
+  </infoTributaria>
+  <infoFactura>
+    <fechaEmision>03/10/2025</fechaEmision>
+    <dirEstablecimiento>Main Establishment</dirEstablecimiento>
+    <obligadoContabilidad>SI</obligadoContabilidad>
+    <tipoIdentificacionComprador>05</tipoIdentificacionComprador>
+    <guiaRemision>000-000-000000000</guiaRemision>
+    <razonSocialComprador>JUAN PÉREZ</razonSocialComprador>
+    <identificacionComprador>1717218912</identificacionComprador>
+    <direccionComprador>Av. República 240</direccionComprador>
+    <totalSinImpuestos>1.43</totalSinImpuestos>
+    <totalDescuento>0.00</totalDescuento>
+    <totalConImpuestos>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>4</codigoPorcentaje>
+        <baseImponible>1.43</baseImponible>
+        <tarifa>15.00</tarifa>
+        <valor>0.22</valor>
+      </totalImpuesto>
+    </totalConImpuestos>
+    <propina>0.00</propina>
+    <importeTotal>1.65</importeTotal>
+    <moneda>USD</moneda>
+    <pagos>
+      <pago>
+        <formaPago>20</formaPago>
+        <total>1.65</total>
+        <plazo>30</plazo>
+        <unidadTiempo>DIAS</unidadTiempo>
+      </pago>
+    </pagos>
+    <valorRetRenta>0.22</valorRetRenta>
+  </infoFactura>
+  <detalles>
+    <detalle>
+      <codigoPrincipal>DELIVERY-FEE-EC</codigoPrincipal>
+      <descripcion>Servicio Logistico</descripcion>
+      <unidadMedida>UND</unidadMedida>
+      <cantidad>1.00</cantidad>
+      <precioUnitario>1.30</precioUnitario>
+      <descuento>0.00</descuento>
+      <precioTotalSinImpuesto>1.30</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>4</codigoPorcentaje>
+          <tarifa>15</tarifa>
+          <baseImponible>1.30</baseImponible>
+          <valor>0.19</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+    <detalle>
+      <codigoPrincipal>SERVICE-FEE-EC</codigoPrincipal>
+      <descripcion>Tarifa de servicio</descripcion>
+      <unidadMedida>UND</unidadMedida>
+      <cantidad>1.00</cantidad>
+      <precioUnitario>0.14</precioUnitario>
+      <descuento>0.00</descuento>
+      <precioTotalSinImpuesto>0.14</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>4</codigoPorcentaje>
+          <tarifa>15</tarifa>
+          <baseImponible>0.14</baseImponible>
+          <valor>0.02</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+  </detalles>
+  <infoAdicional>
+    <campoAdicional nombre="Email">user@auranet.com</campoAdicional>
+  </infoAdicional>
+</factura>

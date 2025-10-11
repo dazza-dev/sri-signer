@@ -7,7 +7,7 @@ use DazzaDev\SriXmlGenerator\Models\Invoice\Invoice;
 
 $documentData = [
     'environment' => 1,
-    "sequential" => "000000008",
+    "sequential" => "000000009",
     "date" => "2025-10-03",
     "currency" => "DOLAR",
 ];

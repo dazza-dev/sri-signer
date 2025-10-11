@@ -261,13 +261,12 @@ trait Signer
         $x509IssuerName = $xml->createElement('ds:X509IssuerName');
 
         // Extract issuer name from certificate
-        $certDetails = $this->getCertificateDetails();
-        $x509IssuerName->nodeValue = $this->formatIssuerName($certDetails['issuer']);
+        $x509IssuerName->nodeValue = $this->getIssuerName();
         $issuerSerial->appendChild($x509IssuerName);
 
         // Add X509SerialNumber for certificate serial number
         $x509SerialNumber = $xml->createElement('ds:X509SerialNumber');
-        $x509SerialNumber->nodeValue = $certDetails['serialNumber'];
+        $x509SerialNumber->nodeValue = $this->getCertificateSerialNumber();
         $issuerSerial->appendChild($x509SerialNumber);
 
         $cert->appendChild($issuerSerial);

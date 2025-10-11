@@ -126,6 +126,26 @@ trait Certificate
     }
 
     /**
+     * Get certificate serial number
+     */
+    public function getCertificateSerialNumber(): string
+    {
+        $certDetails = $this->getCertificateDetails();
+
+        return $certDetails['serialNumber'];
+    }
+
+    /**
+     * Get issuer name formatted according to SRI requirements
+     */
+    public function getIssuerName(): string
+    {
+        $certDetails = $this->getCertificateDetails();
+
+        return $this->formatIssuerName($certDetails['issuer']);
+    }
+
+    /**
      * Format issuer name according to SRI requirements
      */
     public function formatIssuerName(array $issuer): string

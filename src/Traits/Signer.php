@@ -7,6 +7,7 @@ use DOMElement;
 use DateTime;
 use DateTimeZone;
 use Exception;
+use Ramsey\Uuid\Uuid;
 
 trait Signer
 {
@@ -400,15 +401,24 @@ trait Signer
     private function generateRandomNumbers(): void
     {
         $this->randomNumbers = [
-            'certificate' => rand(1, 100000),
-            'certificateId' => rand(1, 100000),
-            'signature' => rand(1, 100000),
-            'signedProperties' => rand(1, 100000),
-            'signedInfo' => rand(1, 100000),
-            'signedPropertiesId' => rand(1, 100000),
-            'referenceId' => rand(1, 100000),
-            'signatureValue' => rand(1, 100000),
-            'object' => rand(1, 100000)
+            'certificate' => $this->generateUUID(),
+            'certificateId' => $this->generateUUID(),
+            'signature' => $this->generateUUID(),
+            'signedProperties' => $this->generateUUID(),
+            'signedInfo' => $this->generateUUID(),
+            'signedPropertiesId' => $this->generateUUID(),
+            'referenceId' => $this->generateUUID(),
+            'signatureValue' => $this->generateUUID(),
+            'object' => $this->generateUUID()
         ];
+    }
+
+    /**
+     * Generate a UUIDv4
+     */
+    private function generateUUID(): string
+    {
+        $uuid = Uuid::uuid4();
+        return $uuid->toString();
     }
 }

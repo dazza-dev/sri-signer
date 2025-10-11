@@ -84,6 +84,10 @@ trait Signer
         $signature->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
         $signature->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:etsi', 'http://uri.etsi.org/01903/v1.3.2#');
 
+        // Create Object with XAdES properties
+        $object = $this->createObject($xml);
+        $signature->appendChild($object);
+
         // Create SignedInfo
         $signedInfo = $this->createSignedInfo($xml);
         $signature->appendChild($signedInfo);
@@ -91,10 +95,6 @@ trait Signer
         // Create KeyInfo
         $keyInfo = $this->createKeyInfo($xml);
         $signature->appendChild($keyInfo);
-
-        // Create Object with XAdES properties
-        $object = $this->createObject($xml);
-        $signature->appendChild($object);
 
         // Create SignatureValue
         $signatureValue = $this->createSignatureValue($xml, $signedInfo);
@@ -249,7 +249,9 @@ trait Signer
         $digestMethod->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
         $certDigest->appendChild($digestMethod);
 
+        // Add DigestValue for certificate digest
         $digestValue = $xml->createElement('ds:DigestValue');
+
         // Calculate SHA1 hash of certificate in DER format
         $digestValue->nodeValue = $this->sha1Base64(base64_decode($this->getCleanX509Certificate()));
         $certDigest->appendChild($digestValue);
@@ -264,8 +266,8 @@ trait Signer
         $x509IssuerName->nodeValue = $issuerName;
         $issuerSerial->appendChild($x509IssuerName);
 
+        // Add X509SerialNumber for certificate serial number
         $x509SerialNumber = $xml->createElement('ds:X509SerialNumber');
-        // Convert serial number from hex to decimal format
         $serialNumber = $certDetails['serialNumber'];
         $x509SerialNumber->nodeValue = $serialNumber;
         $issuerSerial->appendChild($x509SerialNumber);

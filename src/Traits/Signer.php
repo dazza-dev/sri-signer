@@ -14,6 +14,8 @@ trait Signer
 
     private string $hashComprobante = '';
 
+    private string $hashSignedProperties = '';
+
     /**
      * Sign the XML document with XAdES-BES format
      */
@@ -298,6 +300,10 @@ trait Signer
 
         $qualifyingProperties->appendChild($signedProperties);
         $object->appendChild($qualifyingProperties);
+
+        // Canonicalize SignedProperties and generate its hash
+        $canonicalizedSignedProperties = $this->canonicalizeElement($signedProperties);
+        $this->hashSignedProperties = $this->sha1Base64($canonicalizedSignedProperties);
 
         return $object;
     }

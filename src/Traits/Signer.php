@@ -74,9 +74,6 @@ trait Signer
         $signature->appendChild($keyInfo);
         $signature->appendChild($object);
 
-        // Calculate hashes for references
-        //$this->calculateReferenceHashes($xml, $signedInfo, $keyInfo, $object);
-
         return $signature;
     }
 
@@ -310,27 +307,6 @@ trait Signer
         $signatureValue->nodeValue = trim($formattedSignature);
 
         return $signatureValue;
-    }
-
-    /**
-     * Calculate hashes for all references in SignedInfo
-     */
-    private function calculateReferenceHashes(DOMDocument $xml, DOMElement $signedInfo, DOMElement $keyInfo, DOMElement $object): void
-    {
-        $references = $signedInfo->getElementsByTagName('ds:Reference');
-
-        foreach ($references as $reference) {
-            $uri = $reference->getAttribute('URI');
-            $digestValue = $reference->getElementsByTagName('ds:DigestValue')->item(0);
-
-            if (strpos($uri, '#Signature') === 0 && strpos($uri, 'SignedProperties') !== false) {
-                $digestValue->nodeValue = $this->hashSignedProperties;
-            } elseif (strpos($uri, '#Certificate') === 0) {
-                $digestValue->nodeValue = $this->hashKeyInfo;
-            } elseif ($uri === '#comprobante') {
-                $digestValue->nodeValue = $this->hashComprobante;
-            }
-        }
     }
 
     /**

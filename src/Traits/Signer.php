@@ -251,7 +251,7 @@ trait Signer
 
         $digestValue = $xml->createElement('ds:DigestValue');
         // Calculate SHA1 hash of certificate in DER format
-        $digestValue->nodeValue = base64_encode(sha1(base64_decode($this->getCleanX509Certificate()), true));
+        $digestValue->nodeValue = $this->sha1Base64(base64_decode($this->getCleanX509Certificate()));
         $certDigest->appendChild($digestValue);
         $cert->appendChild($certDigest);
 
@@ -313,11 +313,12 @@ trait Signer
                 // Hash of SignedProperties
                 $signedProperties = $object->getElementsByTagName('etsi:SignedProperties')->item(0);
                 $canonicalized = $this->canonicalizeElement($signedProperties);
-                $hash = base64_encode(sha1($canonicalized, true));
+                $hash = $this->sha1Base64($canonicalized);
                 $digestValue->nodeValue = $hash;
             } elseif (strpos($uri, '#Certificate') === 0) {
-                // Hash of X509 certificate in DER format (as per SRI documentation)
-                $hash = base64_encode(sha1(base64_decode($this->getCleanX509Certificate()), true));
+                // Hash of complete KeyInfo element (including RSAKeyValue) to match JavaScript implementation
+                $canonicalized = $this->canonicalizeElement($keyInfo);
+                $hash = $this->sha1Base64($canonicalized);
                 $digestValue->nodeValue = $hash;
             } elseif ($uri === '#comprobante') {
                 // Hash of comprobante (root element without signature)
@@ -344,7 +345,7 @@ trait Signer
                 }
 
                 $canonicalized = $importedRoot->C14N();
-                $hash = base64_encode(sha1($canonicalized, true));
+                $hash = $this->sha1Base64($canonicalized);
                 $digestValue->nodeValue = $hash;
             }
         }
@@ -395,5 +396,14 @@ trait Signer
         $signatureValue->nodeValue = base64_encode($signature);
 
         return $signatureValue;
+    }
+
+    /**
+     * Calculate SHA1 hash and encode to base64
+     * Equivalent to JavaScript sha1_base64 function
+     */
+    private function sha1Base64(string $text): string
+    {
+        return base64_encode(sha1($text, true));
     }
 }

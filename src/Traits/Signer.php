@@ -290,8 +290,7 @@ trait Signer
         // Canonicalize SignedInfo
         $canonicalized = $this->canonicalizeElement($signedInfo);
 
-        // Sign with private key
-        $privateKey = openssl_pkey_get_private($this->getPrivateKey());
+        $privateKey = openssl_pkey_get_private($this->getSigningPrivateKey());
         if (!$privateKey) {
             throw new Exception("Failed to load private key");
         }

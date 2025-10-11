@@ -110,7 +110,7 @@ trait Signer
         $signature->insertBefore($signatureValue, $keyInfo);
 
         // Calculate hashes for references
-        $this->calculateReferenceHashes($xml, $signedInfo, $keyInfo, $object);
+        //$this->calculateReferenceHashes($xml, $signedInfo, $keyInfo, $object);
 
         return $signature;
     }

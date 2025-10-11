@@ -147,6 +147,10 @@ trait Signer
         $mimeType->nodeValue = 'text/xml';
         $dataObjectFormat->appendChild($mimeType);
 
+        $encoding = $xml->createElement('xades:Encoding');
+        $encoding->nodeValue = 'UTF-8';
+        $dataObjectFormat->appendChild($encoding);
+
         $signedDataObjectProperties->appendChild($dataObjectFormat);
         $signedProperties->appendChild($signedDataObjectProperties);
 

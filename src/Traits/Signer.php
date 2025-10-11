@@ -444,7 +444,6 @@ trait Signer
 
     /**
      * Calculate SHA1 hash and encode to base64
-     * Equivalent to JavaScript sha1_base64 function
      */
     private function sha1Base64(string $text): string
     {

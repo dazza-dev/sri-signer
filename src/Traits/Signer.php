@@ -58,19 +58,21 @@ trait Signer
 
         // Create Object with XAdES properties
         $object = $this->createObject($xml);
-        $signature->appendChild($object);
 
         // Create KeyInfo
         $keyInfo = $this->createKeyInfo($xml);
-        $signature->appendChild($keyInfo);
 
         // Create SignedInfo
         $signedInfo = $this->createSignedInfo($xml);
-        $signature->appendChild($signedInfo);
 
         // Create SignatureValue
         $signatureValue = $this->createSignatureValue($xml, $signedInfo);
-        $signature->insertBefore($signatureValue, $keyInfo);
+
+        // Insert SignatureValue before KeyInfo
+        $signature->appendChild($signedInfo);
+        $signature->appendChild($signatureValue);
+        $signature->appendChild($keyInfo);
+        $signature->appendChild($object);
 
         // Calculate hashes for references
         //$this->calculateReferenceHashes($xml, $signedInfo, $keyInfo, $object);

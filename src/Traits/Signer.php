@@ -24,37 +24,17 @@ trait Signer
         $signatureElement = $this->createSignatureStructure($xml);
         $xml->documentElement->appendChild($signatureElement);
 
-        // Get the formatted XML with proper indentation but remove signature indentation
+        // Get the formatted XML with proper indentation
         $xml->formatOutput = true;
         $xmlString = $xml->saveXML();
 
-        // Remove indentation from signature elements only
-        $xmlString = $this->removeSignatureIndentation($xmlString);
+        // Normalize XML content to match JavaScript implementation
+        $xmlString = $this->normalizeXmlContent($xmlString);
 
         // Remove the signature element from the original document
         $xml->documentElement->removeChild($signatureElement);
 
         return $xmlString;
-    }
-
-    /**
-     * Remove indentation from signature elements while preserving original XML formatting
-     */
-    private function removeSignatureIndentation(string $xmlString): string
-    {
-        // Pattern to match signature elements with indentation
-        $pattern = '/(\s+)(<ds:Signature[^>]*>.*?<\/ds:Signature>)/s';
-
-        return preg_replace_callback($pattern, function ($matches) {
-            $indentation = $matches[1];
-            $signatureContent = $matches[2];
-
-            // Remove all indentation from signature content
-            $signatureContent = preg_replace('/\n\s+/', '', $signatureContent);
-
-            // Return signature without indentation but preserve the original line break
-            return "\n" . $signatureContent;
-        }, $xmlString);
     }
 
     /**
@@ -405,5 +385,26 @@ trait Signer
     private function sha1Base64(string $text): string
     {
         return base64_encode(sha1($text, true));
+    }
+
+    /**
+     * Normalize XML content by removing unnecessary whitespace and formatting
+     * Equivalent to JavaScript XML normalization in sign function
+     */
+    private function normalizeXmlContent(string $xmlContent): string
+    {
+        return trim(
+            preg_replace(
+                ['/(:\s>)(\s+)/', '/\s+/'],
+                ['', ' '],
+                trim(
+                    preg_replace(
+                        '/(:\s>)(\s+)(\r\n)(\r\n)(\s<\/)/',
+                        '',
+                        trim(preg_replace('/\s+/', ' ', $xmlContent))
+                    )
+                )
+            )
+        );
     }
 }

@@ -96,12 +96,12 @@ trait Signer
         $object = $this->createObject($xml);
         $signature->appendChild($object);
 
-        // Calculate hashes for references
-        $this->calculateReferenceHashes($xml, $signedInfo, $keyInfo, $object);
-
         // Create SignatureValue
         $signatureValue = $this->createSignatureValue($xml, $signedInfo);
         $signature->insertBefore($signatureValue, $keyInfo);
+
+        // Calculate hashes for references
+        $this->calculateReferenceHashes($xml, $signedInfo, $keyInfo, $object);
 
         return $signature;
     }

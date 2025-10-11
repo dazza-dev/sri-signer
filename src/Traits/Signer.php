@@ -320,13 +320,9 @@ trait Signer
             $digestValue = $reference->getElementsByTagName('ds:DigestValue')->item(0);
 
             if (strpos($uri, '#Signature') === 0 && strpos($uri, 'SignedProperties') !== false) {
-                // Hash of SignedProperties
-                $signedProperties = $object->getElementsByTagName('etsi:SignedProperties')->item(0);
-                $canonicalized = $this->canonicalizeElement($signedProperties);
-                $hash = $this->sha1Base64($canonicalized);
-                $digestValue->nodeValue = $hash;
+                $digestValue->nodeValue = $this->hashSignedProperties;
             } elseif (strpos($uri, '#Certificate') === 0) {
-                // Hash of complete KeyInfo element (including RSAKeyValue) to match JavaScript implementation
+                // Hash of complete KeyInfo element (including RSAKeyValue)
                 $canonicalized = $this->canonicalizeElement($keyInfo);
                 $hash = $this->sha1Base64($canonicalized);
                 $digestValue->nodeValue = $hash;

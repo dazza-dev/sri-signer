@@ -169,7 +169,7 @@ trait Certificate
      */
     public function getDerBinary(): string
     {
-        return base64_decode($this->getCleanX509Certificate());
+        return base64_decode($this->getFormattedX509Certificate());
     }
 
     /**
@@ -191,6 +191,160 @@ trait Certificate
     public function getPrivateKey(): string
     {
         return $this->certificateData['pkey'];
+    }
+
+    /**
+     * Extract all private keys from P12 certificate using OpenSSL
+     * Returns array of private keys with their friendly names and types
+     */
+    public function extractAllPrivateKeys(): array
+    {
+        $tempPemFile = tempnam(sys_get_temp_dir(), 'cert_keys_');
+        
+        try {
+            // Extract all keys and certificates to temporary PEM file
+            $command = sprintf(
+                'openssl pkcs12 -in %s -passin pass:%s -nodes -out %s 2>/dev/null',
+                escapeshellarg($this->certificatePath),
+                escapeshellarg($this->certificatePassword),
+                escapeshellarg($tempPemFile)
+            );
+            
+            exec($command, $output, $returnCode);
+            
+            if ($returnCode !== 0) {
+                throw new CertificateException('Failed to extract private keys from P12 certificate');
+            }
+            
+            $pemContent = file_get_contents($tempPemFile);
+            if ($pemContent === false) {
+                throw new CertificateException('Failed to read extracted PEM content');
+            }
+            
+            return $this->parsePrivateKeysFromPem($pemContent);
+            
+        } finally {
+            if (file_exists($tempPemFile)) {
+                unlink($tempPemFile);
+            }
+        }
+    }
+
+    /**
+     * Parse private keys from PEM content
+     * Identifies Signing Key vs Decryption Key based on friendly names
+     */
+    private function parsePrivateKeysFromPem(string $pemContent): array
+    {
+        $privateKeys = [];
+        $lines = explode("\n", $pemContent);
+        $currentKey = null;
+        $keyContent = '';
+        $inKey = false;
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            
+            // Check for friendly name indicators
+            if (strpos($line, 'friendlyName:') !== false || 
+                strpos($line, 'Signing Key') !== false || 
+                strpos($line, 'Decryption Key') !== false) {
+                
+                if (strpos($line, 'Signing Key') !== false) {
+                    $currentKey = ['type' => 'signing', 'friendlyName' => $line];
+                } elseif (strpos($line, 'Decryption Key') !== false) {
+                    $currentKey = ['type' => 'decryption', 'friendlyName' => $line];
+                } else {
+                    $currentKey = ['type' => 'unknown', 'friendlyName' => $line];
+                }
+            }
+            
+            // Start of private key
+            if (strpos($line, '-----BEGIN') !== false && 
+                (strpos($line, 'PRIVATE KEY') !== false || strpos($line, 'RSA PRIVATE KEY') !== false)) {
+                $inKey = true;
+                $keyContent = $line . "\n";
+                continue;
+            }
+            
+            // End of private key
+            if (strpos($line, '-----END') !== false && 
+                (strpos($line, 'PRIVATE KEY') !== false || strpos($line, 'RSA PRIVATE KEY') !== false)) {
+                $keyContent .= $line . "\n";
+                $inKey = false;
+                
+                if ($currentKey !== null) {
+                    $currentKey['content'] = $keyContent;
+                    $privateKeys[] = $currentKey;
+                } else {
+                    // If no friendly name found, assume it's a signing key
+                    $privateKeys[] = [
+                        'type' => 'signing',
+                        'friendlyName' => 'Default Private Key',
+                        'content' => $keyContent
+                    ];
+                }
+                
+                $keyContent = '';
+                $currentKey = null;
+                continue;
+            }
+            
+            // Collect key content
+            if ($inKey) {
+                $keyContent .= $line . "\n";
+            }
+        }
+        
+        return $privateKeys;
+    }
+
+    /**
+     * Get the correct signing private key
+     * Prioritizes keys marked as "Signing Key" over "Decryption Key"
+     */
+    public function getSigningPrivateKey(): string
+    {
+        $allKeys = $this->extractAllPrivateKeys();
+        
+        if (empty($allKeys)) {
+            // Fallback to standard method if no keys found
+            return $this->getPrivateKey();
+        }
+        
+        // Look for signing key first
+        foreach ($allKeys as $key) {
+            if ($key['type'] === 'signing') {
+                return $key['content'];
+            }
+        }
+        
+        // If no signing key found, use the first available key
+        return $allKeys[0]['content'];
+    }
+
+    /**
+     * Validate that the signing private key works correctly
+     * Tests the key by attempting to sign a small test string
+     */
+    public function validateSigningKey(string $privateKeyContent): bool
+    {
+        try {
+            $testData = 'test_signature_validation';
+            $privateKey = openssl_pkey_get_private($privateKeyContent, $this->certificatePassword);
+            
+            if ($privateKey === false) {
+                return false;
+            }
+            
+            $signature = '';
+            $result = openssl_sign($testData, $signature, $privateKey, OPENSSL_ALGO_SHA1);
+            
+            return $result !== false;
+            
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     /**

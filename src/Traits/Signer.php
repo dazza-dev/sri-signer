@@ -86,6 +86,7 @@ trait Signer
         $object->setAttribute('Id', 'SignatureObject-' . $this->randomNumbers['object']);
 
         $qualifyingProperties = $xml->createElement('xades:QualifyingProperties');
+        $qualifyingProperties->setAttribute('xmlns:xades', 'http://uri.etsi.org/01903/v1.3.2#');
         $qualifyingProperties->setAttribute('Target', '#Signature-' . $this->randomNumbers['signature']);
 
         $signedProperties = $xml->createElement('xades:SignedProperties');

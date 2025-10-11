@@ -161,7 +161,7 @@ trait Certificate
             return $attr['shortName'] . '=' . $attr['value'];
         }, array_reverse($issuerAttrs));
 
-        return implode(', ', $issuerName);
+        return implode(',', $issuerName);
     }
 
     /**
@@ -200,7 +200,7 @@ trait Certificate
     public function extractAllPrivateKeys(): array
     {
         $tempPemFile = tempnam(sys_get_temp_dir(), 'cert_keys_');
-        
+
         try {
             // Extract all keys and certificates to temporary PEM file
             $command = sprintf(
@@ -209,20 +209,19 @@ trait Certificate
                 escapeshellarg($this->certificatePassword),
                 escapeshellarg($tempPemFile)
             );
-            
+
             exec($command, $output, $returnCode);
-            
+
             if ($returnCode !== 0) {
                 throw new CertificateException('Failed to extract private keys from P12 certificate');
             }
-            
+
             $pemContent = file_get_contents($tempPemFile);
             if ($pemContent === false) {
                 throw new CertificateException('Failed to read extracted PEM content');
             }
-            
+
             return $this->parsePrivateKeysFromPem($pemContent);
-            
         } finally {
             if (file_exists($tempPemFile)) {
                 unlink($tempPemFile);
@@ -241,15 +240,17 @@ trait Certificate
         $currentKey = null;
         $keyContent = '';
         $inKey = false;
-        
+
         foreach ($lines as $line) {
             $line = trim($line);
-            
+
             // Check for friendly name indicators
-            if (strpos($line, 'friendlyName:') !== false || 
-                strpos($line, 'Signing Key') !== false || 
-                strpos($line, 'Decryption Key') !== false) {
-                
+            if (
+                strpos($line, 'friendlyName:') !== false ||
+                strpos($line, 'Signing Key') !== false ||
+                strpos($line, 'Decryption Key') !== false
+            ) {
+
                 if (strpos($line, 'Signing Key') !== false) {
                     $currentKey = ['type' => 'signing', 'friendlyName' => $line];
                 } elseif (strpos($line, 'Decryption Key') !== false) {
@@ -258,21 +259,25 @@ trait Certificate
                     $currentKey = ['type' => 'unknown', 'friendlyName' => $line];
                 }
             }
-            
+
             // Start of private key
-            if (strpos($line, '-----BEGIN') !== false && 
-                (strpos($line, 'PRIVATE KEY') !== false || strpos($line, 'RSA PRIVATE KEY') !== false)) {
+            if (
+                strpos($line, '-----BEGIN') !== false &&
+                (strpos($line, 'PRIVATE KEY') !== false || strpos($line, 'RSA PRIVATE KEY') !== false)
+            ) {
                 $inKey = true;
                 $keyContent = $line . "\n";
                 continue;
             }
-            
+
             // End of private key
-            if (strpos($line, '-----END') !== false && 
-                (strpos($line, 'PRIVATE KEY') !== false || strpos($line, 'RSA PRIVATE KEY') !== false)) {
+            if (
+                strpos($line, '-----END') !== false &&
+                (strpos($line, 'PRIVATE KEY') !== false || strpos($line, 'RSA PRIVATE KEY') !== false)
+            ) {
                 $keyContent .= $line . "\n";
                 $inKey = false;
-                
+
                 if ($currentKey !== null) {
                     $currentKey['content'] = $keyContent;
                     $privateKeys[] = $currentKey;
@@ -284,18 +289,18 @@ trait Certificate
                         'content' => $keyContent
                     ];
                 }
-                
+
                 $keyContent = '';
                 $currentKey = null;
                 continue;
             }
-            
+
             // Collect key content
             if ($inKey) {
                 $keyContent .= $line . "\n";
             }
         }
-        
+
         return $privateKeys;
     }
 
@@ -306,19 +311,19 @@ trait Certificate
     public function getSigningPrivateKey(): string
     {
         $allKeys = $this->extractAllPrivateKeys();
-        
+
         if (empty($allKeys)) {
             // Fallback to standard method if no keys found
             return $this->getPrivateKey();
         }
-        
+
         // Look for signing key first
         foreach ($allKeys as $key) {
             if ($key['type'] === 'signing') {
                 return $key['content'];
             }
         }
-        
+
         // If no signing key found, use the first available key
         return $allKeys[0]['content'];
     }
@@ -332,16 +337,15 @@ trait Certificate
         try {
             $testData = 'test_signature_validation';
             $privateKey = openssl_pkey_get_private($privateKeyContent, $this->certificatePassword);
-            
+
             if ($privateKey === false) {
                 return false;
             }
-            
+
             $signature = '';
             $result = openssl_sign($testData, $signature, $privateKey, OPENSSL_ALGO_SHA1);
-            
+
             return $result !== false;
-            
         } catch (\Exception $e) {
             return false;
         }

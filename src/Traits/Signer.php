@@ -331,10 +331,7 @@ trait Signer
             if (strpos($uri, '#Signature') === 0 && strpos($uri, 'SignedProperties') !== false) {
                 $digestValue->nodeValue = $this->hashSignedProperties;
             } elseif (strpos($uri, '#Certificate') === 0) {
-                // Hash of complete KeyInfo element (including RSAKeyValue)
-                $canonicalized = $this->canonicalizeElement($keyInfo);
-                $hash = $this->sha1Base64($canonicalized);
-                $digestValue->nodeValue = $hash;
+                $digestValue->nodeValue = $this->hashKeyInfo;
             } elseif ($uri === '#comprobante') {
                 $digestValue->nodeValue = $this->hashComprobante;
             }

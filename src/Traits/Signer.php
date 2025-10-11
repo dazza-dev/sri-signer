@@ -258,9 +258,9 @@ trait Signer
         $cert->appendChild($certDigest);
 
         $issuerSerial = $xml->createElement('etsi:IssuerSerial');
-        $x509IssuerName = $xml->createElement('ds:X509IssuerName');
 
-        // Extract issuer name from certificate
+        // Add X509IssuerName for certificate issuer name
+        $x509IssuerName = $xml->createElement('ds:X509IssuerName');
         $x509IssuerName->nodeValue = $this->getIssuerName();
         $issuerSerial->appendChild($x509IssuerName);
 

@@ -253,23 +253,21 @@ trait Signer
         $digestValue = $xml->createElement('ds:DigestValue');
 
         // Calculate SHA1 hash of certificate in DER format
-        $digestValue->nodeValue = $this->sha1Base64(base64_decode($this->getCleanX509Certificate()));
+        $digestValue->nodeValue = $this->sha1Base64($this->getDerBinary());
         $certDigest->appendChild($digestValue);
         $cert->appendChild($certDigest);
 
         $issuerSerial = $xml->createElement('etsi:IssuerSerial');
         $x509IssuerName = $xml->createElement('ds:X509IssuerName');
 
-        // Extract issuer name from certificate instead of using hardcoded value
+        // Extract issuer name from certificate
         $certDetails = $this->getCertificateDetails();
-        $issuerName = $this->formatIssuerName($certDetails['issuer']);
-        $x509IssuerName->nodeValue = $issuerName;
+        $x509IssuerName->nodeValue = $this->formatIssuerName($certDetails['issuer']);
         $issuerSerial->appendChild($x509IssuerName);
 
         // Add X509SerialNumber for certificate serial number
         $x509SerialNumber = $xml->createElement('ds:X509SerialNumber');
-        $serialNumber = $certDetails['serialNumber'];
-        $x509SerialNumber->nodeValue = $serialNumber;
+        $x509SerialNumber->nodeValue = $certDetails['serialNumber'];
         $issuerSerial->appendChild($x509SerialNumber);
 
         $cert->appendChild($issuerSerial);

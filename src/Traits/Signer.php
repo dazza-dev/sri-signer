@@ -116,124 +116,6 @@ trait Signer
     }
 
     /**
-     * Create the SignedInfo element
-     */
-    private function createSignedInfo(DOMDocument $xml): DOMElement
-    {
-        $signedInfo = $xml->createElement('ds:SignedInfo');
-        $signedInfo->setAttribute('Id', 'Signature-SignedInfo' . $this->randomNumbers['signedInfo']);
-
-        // CanonicalizationMethod
-        $canonicalizationMethod = $xml->createElement('ds:CanonicalizationMethod');
-        $canonicalizationMethod->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
-        $signedInfo->appendChild($canonicalizationMethod);
-
-        // SignatureMethod
-        $signatureMethod = $xml->createElement('ds:SignatureMethod');
-        $signatureMethod->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#rsa-sha1');
-        $signedInfo->appendChild($signatureMethod);
-
-        // Reference to SignedProperties
-        $reference1 = $xml->createElement('ds:Reference');
-        $reference1->setAttribute('Id', 'SignedPropertiesID' . $this->randomNumbers['signedPropertiesId']);
-        $reference1->setAttribute('Type', 'http://uri.etsi.org/01903#SignedProperties');
-        $reference1->setAttribute('URI', '#Signature' . $this->randomNumbers['signature'] . '-SignedProperties' . $this->randomNumbers['signedProperties']);
-
-        $digestMethod1 = $xml->createElement('ds:DigestMethod');
-        $digestMethod1->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
-        $reference1->appendChild($digestMethod1);
-
-        $digestValue1 = $xml->createElement('ds:DigestValue');
-        $digestValue1->nodeValue = $this->hashSignedProperties;
-        $reference1->appendChild($digestValue1);
-
-        // Add Reference1 to SignedInfo
-        $signedInfo->appendChild($reference1);
-
-        // Reference to KeyInfo
-        $reference2 = $xml->createElement('ds:Reference');
-        $reference2->setAttribute('URI', '#Certificate' . $this->randomNumbers['certificate']);
-
-        $digestMethod2 = $xml->createElement('ds:DigestMethod');
-        $digestMethod2->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
-        $reference2->appendChild($digestMethod2);
-
-        $digestValue2 = $xml->createElement('ds:DigestValue');
-        $digestValue2->nodeValue = $this->hashKeyInfo;
-        $reference2->appendChild($digestValue2);
-
-        // Add Reference2 to SignedInfo
-        $signedInfo->appendChild($reference2);
-
-        // Reference to comprobante (root element)
-        $reference3 = $xml->createElement('ds:Reference');
-        $reference3->setAttribute('Id', 'Reference-ID-' . $this->randomNumbers['referenceId']);
-        $reference3->setAttribute('URI', '#comprobante');
-
-        $transforms3 = $xml->createElement('ds:Transforms');
-        $transform3 = $xml->createElement('ds:Transform');
-        $transform3->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#enveloped-signature');
-        $transforms3->appendChild($transform3);
-        $reference3->appendChild($transforms3);
-
-        $digestMethod3 = $xml->createElement('ds:DigestMethod');
-        $digestMethod3->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
-        $reference3->appendChild($digestMethod3);
-
-        $digestValue3 = $xml->createElement('ds:DigestValue');
-        $digestValue3->nodeValue = $this->hashComprobante;
-        $reference3->appendChild($digestValue3);
-
-        // Add Reference3 to SignedInfo
-        $signedInfo->appendChild($reference3);
-
-        return $signedInfo;
-    }
-
-    /**
-     * Create the KeyInfo element
-     */
-    private function createKeyInfo(DOMDocument $xml): DOMElement
-    {
-        $keyInfo = $xml->createElement('ds:KeyInfo');
-        $keyInfo->setAttribute('Id', 'Certificate' . $this->randomNumbers['certificate']);
-
-        // X509Data
-        $x509Data = $xml->createElement('ds:X509Data');
-        $x509Certificate = $xml->createElement('ds:X509Certificate');
-
-        // Get formatted certificate data with line breaks every 76 characters
-        $x509Certificate->nodeValue = $this->getFormattedX509Certificate();
-        $x509Data->appendChild($x509Certificate);
-        $keyInfo->appendChild($x509Data);
-
-        // KeyValue
-        $keyValue = $xml->createElement('ds:KeyValue');
-        $rsaKeyValue = $xml->createElement('ds:RSAKeyValue');
-
-        // Extract public key details
-        $publicKey = openssl_pkey_get_public($this->getPublicCert());
-        $keyDetails = openssl_pkey_get_details($publicKey);
-
-        $modulus = $xml->createElement('ds:Modulus');
-        $modulus->nodeValue = base64_encode($keyDetails['rsa']['n']);
-        $rsaKeyValue->appendChild($modulus);
-
-        $exponent = $xml->createElement('ds:Exponent');
-        $exponent->nodeValue = base64_encode($keyDetails['rsa']['e']);
-        $rsaKeyValue->appendChild($exponent);
-
-        $keyValue->appendChild($rsaKeyValue);
-        $keyInfo->appendChild($keyValue);
-
-        // Calculate hash of KeyInfo
-        $canonicalizedKeyInfo = $this->canonicalizeElement($keyInfo);
-        $this->hashKeyInfo = $this->sha1Base64($canonicalizedKeyInfo);
-
-        return $keyInfo;
-    }
-
-    /**
      * Create the Object element with XAdES properties
      */
     private function createObject(DOMDocument $xml): DOMElement
@@ -315,6 +197,124 @@ trait Signer
         $this->hashSignedProperties = $this->sha1Base64($canonicalizedSignedProperties);
 
         return $object;
+    }
+
+    /**
+     * Create the KeyInfo element
+     */
+    private function createKeyInfo(DOMDocument $xml): DOMElement
+    {
+        $keyInfo = $xml->createElement('ds:KeyInfo');
+        $keyInfo->setAttribute('Id', 'Certificate' . $this->randomNumbers['certificate']);
+
+        // X509Data
+        $x509Data = $xml->createElement('ds:X509Data');
+        $x509Certificate = $xml->createElement('ds:X509Certificate');
+
+        // Get formatted certificate data with line breaks every 76 characters
+        $x509Certificate->nodeValue = $this->getFormattedX509Certificate();
+        $x509Data->appendChild($x509Certificate);
+        $keyInfo->appendChild($x509Data);
+
+        // KeyValue
+        $keyValue = $xml->createElement('ds:KeyValue');
+        $rsaKeyValue = $xml->createElement('ds:RSAKeyValue');
+
+        // Extract public key details
+        $publicKey = openssl_pkey_get_public($this->getPublicCert());
+        $keyDetails = openssl_pkey_get_details($publicKey);
+
+        $modulus = $xml->createElement('ds:Modulus');
+        $modulus->nodeValue = base64_encode($keyDetails['rsa']['n']);
+        $rsaKeyValue->appendChild($modulus);
+
+        $exponent = $xml->createElement('ds:Exponent');
+        $exponent->nodeValue = base64_encode($keyDetails['rsa']['e']);
+        $rsaKeyValue->appendChild($exponent);
+
+        $keyValue->appendChild($rsaKeyValue);
+        $keyInfo->appendChild($keyValue);
+
+        // Calculate hash of KeyInfo
+        $canonicalizedKeyInfo = $this->canonicalizeElement($keyInfo);
+        $this->hashKeyInfo = $this->sha1Base64($canonicalizedKeyInfo);
+
+        return $keyInfo;
+    }
+
+    /**
+     * Create the SignedInfo element
+     */
+    private function createSignedInfo(DOMDocument $xml): DOMElement
+    {
+        $signedInfo = $xml->createElement('ds:SignedInfo');
+        $signedInfo->setAttribute('Id', 'Signature-SignedInfo' . $this->randomNumbers['signedInfo']);
+
+        // CanonicalizationMethod
+        $canonicalizationMethod = $xml->createElement('ds:CanonicalizationMethod');
+        $canonicalizationMethod->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
+        $signedInfo->appendChild($canonicalizationMethod);
+
+        // SignatureMethod
+        $signatureMethod = $xml->createElement('ds:SignatureMethod');
+        $signatureMethod->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#rsa-sha1');
+        $signedInfo->appendChild($signatureMethod);
+
+        // Reference to SignedProperties
+        $reference1 = $xml->createElement('ds:Reference');
+        $reference1->setAttribute('Id', 'SignedPropertiesID' . $this->randomNumbers['signedPropertiesId']);
+        $reference1->setAttribute('Type', 'http://uri.etsi.org/01903#SignedProperties');
+        $reference1->setAttribute('URI', '#Signature' . $this->randomNumbers['signature'] . '-SignedProperties' . $this->randomNumbers['signedProperties']);
+
+        $digestMethod1 = $xml->createElement('ds:DigestMethod');
+        $digestMethod1->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+        $reference1->appendChild($digestMethod1);
+
+        $digestValue1 = $xml->createElement('ds:DigestValue');
+        $digestValue1->nodeValue = $this->hashSignedProperties;
+        $reference1->appendChild($digestValue1);
+
+        // Add Reference1 to SignedInfo
+        $signedInfo->appendChild($reference1);
+
+        // Reference to KeyInfo
+        $reference2 = $xml->createElement('ds:Reference');
+        $reference2->setAttribute('URI', '#Certificate' . $this->randomNumbers['certificate']);
+
+        $digestMethod2 = $xml->createElement('ds:DigestMethod');
+        $digestMethod2->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+        $reference2->appendChild($digestMethod2);
+
+        $digestValue2 = $xml->createElement('ds:DigestValue');
+        $digestValue2->nodeValue = $this->hashKeyInfo;
+        $reference2->appendChild($digestValue2);
+
+        // Add Reference2 to SignedInfo
+        $signedInfo->appendChild($reference2);
+
+        // Reference to comprobante (root element)
+        $reference3 = $xml->createElement('ds:Reference');
+        $reference3->setAttribute('Id', 'Reference-ID-' . $this->randomNumbers['referenceId']);
+        $reference3->setAttribute('URI', '#comprobante');
+
+        $transforms3 = $xml->createElement('ds:Transforms');
+        $transform3 = $xml->createElement('ds:Transform');
+        $transform3->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#enveloped-signature');
+        $transforms3->appendChild($transform3);
+        $reference3->appendChild($transforms3);
+
+        $digestMethod3 = $xml->createElement('ds:DigestMethod');
+        $digestMethod3->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+        $reference3->appendChild($digestMethod3);
+
+        $digestValue3 = $xml->createElement('ds:DigestValue');
+        $digestValue3->nodeValue = $this->hashComprobante;
+        $reference3->appendChild($digestValue3);
+
+        // Add Reference3 to SignedInfo
+        $signedInfo->appendChild($reference3);
+
+        return $signedInfo;
     }
 
     /**
@@ -414,7 +414,10 @@ trait Signer
             throw new Exception("Failed to create digital signature");
         }
 
-        $signatureValue->nodeValue = base64_encode($signature);
+        // Format signature with 76-character line breaks (equivalent to JavaScript implementation)
+        $base64Signature = base64_encode($signature);
+        $formattedSignature = chunk_split($base64Signature, 76, "\n");
+        $signatureValue->nodeValue = trim($formattedSignature);
 
         return $signatureValue;
     }

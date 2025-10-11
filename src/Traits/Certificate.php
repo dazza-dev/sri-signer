@@ -145,6 +145,14 @@ trait Certificate
     }
 
     /**
+     * Get certificate in DER binary format
+     */
+    public function getDerBinary(): string
+    {
+        return base64_decode($this->getCleanX509Certificate());
+    }
+
+    /**
      * Get certificate details parsed from the certificate
      */
     public function getCertificateDetails(): array

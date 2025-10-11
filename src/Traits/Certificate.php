@@ -172,4 +172,56 @@ trait Certificate
     {
         return $this->certificateData['pkey'];
     }
+
+    /**
+     * Validate certificate dates
+     * Throws exception if certificate has expired or is not yet valid
+     */
+    public function validateCertificateDates(): void
+    {
+        $certDetails = $this->getCertificateDetails();
+
+        // Get certificate validity dates
+        $notBefore = $certDetails['validFrom_time_t'];
+        $notAfter = $certDetails['validTo_time_t'];
+        $currentDate = time();
+
+        if ($currentDate < $notBefore || $currentDate > $notAfter) {
+            throw new CertificateException('Invalid certificate, certificate has expired');
+        }
+    }
+
+    /**
+     * Check if certificate is currently valid (non-throwing version)
+     * Returns true if certificate is valid, false otherwise
+     */
+    public function isCertificateValid(): bool
+    {
+        try {
+            $this->validateCertificateDates();
+            return true;
+        } catch (CertificateException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get certificate validity information
+     * Returns detailed information about certificate dates
+     */
+    public function getCertificateValidity(): array
+    {
+        $certDetails = $this->getCertificateDetails();
+        $currentDate = time();
+
+        return [
+            'notBefore' => $certDetails['validFrom_time_t'],
+            'notAfter' => $certDetails['validTo_time_t'],
+            'currentDate' => $currentDate,
+            'isValid' => $this->isCertificateValid(),
+            'notBeforeFormatted' => date('Y-m-d H:i:s', $certDetails['validFrom_time_t']),
+            'notAfterFormatted' => date('Y-m-d H:i:s', $certDetails['validTo_time_t']),
+            'currentDateFormatted' => date('Y-m-d H:i:s', $currentDate)
+        ];
+    }
 }

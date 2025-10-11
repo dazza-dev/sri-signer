@@ -54,7 +54,6 @@ trait Signer
         $signature = $xml->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Signature');
         $signature->setAttribute('Id', 'Signature' . $this->randomNumbers['signature']);
         $signature->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
-        $signature->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:etsi', 'http://uri.etsi.org/01903/v1.3.2#');
 
         // Create Object with XAdES properties
         $object = $this->createObject($xml);
@@ -85,26 +84,26 @@ trait Signer
         $object = $xml->createElement('ds:Object');
         $object->setAttribute('Id', 'Signature' . $this->randomNumbers['signature'] . '-Object' . $this->randomNumbers['object']);
 
-        $qualifyingProperties = $xml->createElement('etsi:QualifyingProperties');
+        $qualifyingProperties = $xml->createElement('xades:QualifyingProperties');
         $qualifyingProperties->setAttribute('Target', '#Signature' . $this->randomNumbers['signature']);
 
-        $signedProperties = $xml->createElement('etsi:SignedProperties');
+        $signedProperties = $xml->createElement('xades:SignedProperties');
         $signedProperties->setAttribute('Id', 'Signature' . $this->randomNumbers['signature'] . '-SignedProperties' . $this->randomNumbers['signedProperties']);
 
         // SignedSignatureProperties
-        $signedSignatureProperties = $xml->createElement('etsi:SignedSignatureProperties');
+        $signedSignatureProperties = $xml->createElement('xades:SignedSignatureProperties');
 
         // SigningTime
-        $signingTime = $xml->createElement('etsi:SigningTime');
+        $signingTime = $xml->createElement('xades:SigningTime');
         $now = new DateTime('now', new DateTimeZone('America/Guayaquil'));
         $signingTime->nodeValue = $now->format('Y-m-d\TH:i:sP');
         $signedSignatureProperties->appendChild($signingTime);
 
         // SigningCertificate
-        $signingCertificate = $xml->createElement('etsi:SigningCertificate');
-        $cert = $xml->createElement('etsi:Cert');
+        $signingCertificate = $xml->createElement('xades:SigningCertificate');
+        $cert = $xml->createElement('xades:Cert');
 
-        $certDigest = $xml->createElement('etsi:CertDigest');
+        $certDigest = $xml->createElement('xades:CertDigest');
         $digestMethod = $xml->createElement('ds:DigestMethod');
         $digestMethod->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
         $certDigest->appendChild($digestMethod);
@@ -117,7 +116,7 @@ trait Signer
         $certDigest->appendChild($digestValue);
         $cert->appendChild($certDigest);
 
-        $issuerSerial = $xml->createElement('etsi:IssuerSerial');
+        $issuerSerial = $xml->createElement('xades:IssuerSerial');
 
         // Add X509IssuerName for certificate issuer name
         $x509IssuerName = $xml->createElement('ds:X509IssuerName');
@@ -136,15 +135,15 @@ trait Signer
         $signedProperties->appendChild($signedSignatureProperties);
 
         // SignedDataObjectProperties
-        $signedDataObjectProperties = $xml->createElement('etsi:SignedDataObjectProperties');
-        $dataObjectFormat = $xml->createElement('etsi:DataObjectFormat');
+        $signedDataObjectProperties = $xml->createElement('xades:SignedDataObjectProperties');
+        $dataObjectFormat = $xml->createElement('xades:DataObjectFormat');
         $dataObjectFormat->setAttribute('ObjectReference', '#Reference-ID-' . $this->randomNumbers['referenceId']);
 
-        $description = $xml->createElement('etsi:Description');
+        $description = $xml->createElement('xades:Description');
         $description->nodeValue = 'contenido comprobante';
         $dataObjectFormat->appendChild($description);
 
-        $mimeType = $xml->createElement('etsi:MimeType');
+        $mimeType = $xml->createElement('xades:MimeType');
         $mimeType->nodeValue = 'text/xml';
         $dataObjectFormat->appendChild($mimeType);
 
@@ -222,6 +221,28 @@ trait Signer
         $signatureMethod->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#rsa-sha1');
         $signedInfo->appendChild($signatureMethod);
 
+        // Reference to comprobante (root element)
+        $reference3 = $xml->createElement('ds:Reference');
+        $reference3->setAttribute('Id', 'Reference-ID-' . $this->randomNumbers['referenceId']);
+        $reference3->setAttribute('URI', '#comprobante');
+
+        $transforms3 = $xml->createElement('ds:Transforms');
+        $transform3 = $xml->createElement('ds:Transform');
+        $transform3->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#enveloped-signature');
+        $transforms3->appendChild($transform3);
+        $reference3->appendChild($transforms3);
+
+        $digestMethod3 = $xml->createElement('ds:DigestMethod');
+        $digestMethod3->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+        $reference3->appendChild($digestMethod3);
+
+        $digestValue3 = $xml->createElement('ds:DigestValue');
+        $digestValue3->nodeValue = $this->hashComprobante;
+        $reference3->appendChild($digestValue3);
+
+        // Add Reference3 to SignedInfo
+        $signedInfo->appendChild($reference3);
+
         // Reference to SignedProperties
         $reference1 = $xml->createElement('ds:Reference');
         $reference1->setAttribute('Id', 'SignedPropertiesID' . $this->randomNumbers['signedPropertiesId']);
@@ -253,28 +274,6 @@ trait Signer
 
         // Add Reference2 to SignedInfo
         $signedInfo->appendChild($reference2);
-
-        // Reference to comprobante (root element)
-        $reference3 = $xml->createElement('ds:Reference');
-        $reference3->setAttribute('Id', 'Reference-ID-' . $this->randomNumbers['referenceId']);
-        $reference3->setAttribute('URI', '#comprobante');
-
-        $transforms3 = $xml->createElement('ds:Transforms');
-        $transform3 = $xml->createElement('ds:Transform');
-        $transform3->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#enveloped-signature');
-        $transforms3->appendChild($transform3);
-        $reference3->appendChild($transforms3);
-
-        $digestMethod3 = $xml->createElement('ds:DigestMethod');
-        $digestMethod3->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
-        $reference3->appendChild($digestMethod3);
-
-        $digestValue3 = $xml->createElement('ds:DigestValue');
-        $digestValue3->nodeValue = $this->hashComprobante;
-        $reference3->appendChild($digestValue3);
-
-        // Add Reference3 to SignedInfo
-        $signedInfo->appendChild($reference3);
 
         return $signedInfo;
     }

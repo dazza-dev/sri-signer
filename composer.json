@@ -1,0 +1,41 @@
+{
+  "name": "dazza-dev/sri-signer",
+  "description": "Paquete para firmar XML de documentos electrónicos (Factura, Guía de remisión, Nota crédito, Nota débito y Comprobante de retención) basado en las especificaciones del Servicio de Rentas Internas (SRI) de Ecuador.",
+  "keywords": [
+    "sri",
+    "signer",
+    "firma",
+    "firmar xml",
+    "factura electrónica",
+    "ecuador",
+    "xades-bes"
+  ],
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.0",
+    "ramsey/uuid": "^4.9"
+  },
+  "config": {
+    "preferred-install": "dist",
+    "sort-packages": true,
+    "optimize-autoloader": true
+  },
+  "minimum-stability": "stable",
+  "authors": [
+    {
+      "name": "Andres Daza",
+      "email": "adaza90@outlook.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "DazzaDev\\SriSigner\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "DazzaDev\\SriSigner\\Tests\\": "tests/"
+    }
+  }
+}
